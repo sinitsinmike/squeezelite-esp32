@@ -5,29 +5,25 @@ RUN apt-get update && apt-get install -y git wget libncurses-dev flex bison gper
   python-cryptography python-future python-pyparsing \
   python-pyelftools cmake ninja-build ccache libusb-1.0
 
-RUN mkdir /workspace
 WORKDIR /workspace
 
 # Download and checkout known good esp-idf commit
-RUN git clone --recursive https://github.com/espressif/esp-idf.git esp-idf
-RUN cd esp-idf && git checkout 4dac7c7df885adaa86a5c79f2adeaf8d68667349
-RUN git clone https://github.com/sle118/squeezelite-esp32.git
+RUN git clone https://github.com/espressif/esp-idf.git
+RUN cd esp-idf && git checkout afbe1ba8789bda2937a65fa58217c843d80c255b && git submodule update --init --recursive
+RUN cd esp-idf && git checkout 91b421c35f2c3513ac62c090586381e9bcfb06ff tools/cmake/utilities.cmake
 
 # Download GCC 5.2.0
-RUN wget https://dl.espressif.com/dl/xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
-RUN tar -xzf xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
-RUN rm xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
-
-RUN rm -r /workspace/squeezelite-esp32
-RUN mkdir /workspace/squeezelite-esp32
+RUN wget -O - https://dl.espressif.com/dl/xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz | tar -xzf -
 
 # Setup PATH to use esp-idf and gcc-5.2.0
-RUN touch /root/.bashrc && \
- echo export PATH="\$PATH:/workspace/xtensa-esp32-elf/bin" >> /root/.bashrc && \
- echo export IDF_PATH=/workspace/esp-idf >> /root/.bashrc
+RUN echo export PATH=\$PATH:$PWD/xtensa-esp32-elf/bin >> /root/.bashrc &&\
+    echo export PATH=\$PATH:$PWD/esp-idf/tools >> /root/.bashrc &&\
+    echo export IDF_PATH=$PWD/esp-idf >> /root/.bashrc
 
-# OPTIONAL: Install vim for text editing in Bash
-RUN apt-get update && apt-get install -y vim
+# OPTIONAL: Install some text editor
+#RUN apt-get update && apt-get install -y vim
+#RUN apt-get update && apt-get install -y nano
+#RUN apt-get update && apt-get install -y emacs
 
 WORKDIR /workspace/squeezelite-esp32
 CMD ["bash"]

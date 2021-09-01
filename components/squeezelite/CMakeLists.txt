@@ -15,16 +15,37 @@ idf_component_register( SRC_DIRS . external ac101 tas57xx wm8978
 						 EMBED_FILES vu.data
 )
 
-set_source_files_properties(mad.c
-    PROPERTIES COMPILE_FLAGS
-    -Wno-maybe-uninitialized 
-)
-set_source_files_properties(pcm.c
+set_source_files_properties(alac.c
     PROPERTIES COMPILE_FLAGS
     -Wno-maybe-uninitialized
 )
 
 set_source_files_properties(flac.c
+    PROPERTIES COMPILE_FLAGS
+    -Wno-maybe-uninitialized
+)
+
+set_source_files_properties(helix-aac.c
+    PROPERTIES COMPILE_FLAGS
+    -Wno-maybe-uninitialized
+)
+
+set_source_files_properties(mad.c
+    PROPERTIES COMPILE_FLAGS
+    -Wno-maybe-uninitialized
+)
+
+set_source_files_properties(opus.c
+    PROPERTIES COMPILE_FLAGS
+    -Wno-maybe-uninitialized
+)
+
+set_source_files_properties(pcm.c
+    PROPERTIES COMPILE_FLAGS
+    -Wno-maybe-uninitialized
+)
+
+set_source_files_properties(vorbis.c
     PROPERTIES COMPILE_FLAGS
     -Wno-maybe-uninitialized
 )

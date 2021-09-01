@@ -23,6 +23,7 @@
 
 #include "esp_pthread.h"
 #include "esp_log.h"
+#include <netinet/in.h>
 #ifndef SQUEEZELITE_ESP32_RELEASE_URL
 #define SQUEEZELITE_ESP32_RELEASE_URL "https://github.com/sle118/squeezelite-esp32/releases"
 #endif

@@ -436,14 +436,18 @@ See squeezlite command line, but keys options are
 You can use docker to build squeezelite-esp32 (optional) 
 First you need to build the Docker container:
 ```
-docker build -t esp-idf .
+docker build --tag esp-idf .
 ```
 Then you need to run the container:
 ```
-docker run -i -t -v `pwd`:/workspace/squeezelite-esp32 esp-idf
+docker run --interactive --tty --rm --volume `pwd`:/workspace/squeezelite-esp32 esp-idf
 ```
 The above command will mount this repo into the docker container and start a bash terminal
-for you to then follow the below build steps
+for you to then follow the below build steps. Typical steps to build squeezelite-esp32 in
+the container would be:
+
+- cp build-scripts/<configuration> sdkconfig.default
+- idf.py build
 
 ### Manual Install of ESP-IDF
 You can install IDF manually on Linux or Windows (using the Subsystem for Linux) following the instructions at: https://www.instructables.com/id/ESP32-Development-on-Windows-Subsystem-for-Linux/ or see here https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/windows-setup.html for a direct install. 
@@ -453,7 +457,7 @@ You can install IDF manually on Linux or Windows (using the Subsystem for Linux)
 ## Building Squeezelite-esp32
 When initially cloning the repo, make sure you do it recursively. For example: `git clone --recursive https://github.com/sle118/squeezelite-esp32.git`
 	
-Don't forget to choose one of the config files in build_scripts/ and rename it sdkconfig.defaults or sdkconfig as many important WiFi/BT options are set there. **The codecs libraries will not be rebuilt by these scripts (it's a tedious process - see below)**
+Don't forget to choose one of the config files in build-scripts/ and rename it sdkconfig.defaults or sdkconfig as many important WiFi/BT options are set there. **The codecs libraries will not be rebuilt by these scripts (it's a tedious process - see below)**
 
 Create and tweak your config using `idf.py menuconfig` then build binaries using `idf.py all`. It will build the recovery and the application (squeezelite). then use `idf.py flash` to write everything. Otherwise, if you just want to download squeezelite, do (assuming you have set ESPPORT (e.g. COM10) and ESPBAUD (e.g. 921600)
 ```
