@@ -12,6 +12,7 @@
 #include "driver/ledc.h"
 #include "driver/i2c.h"
 #include "platform_config.h"
+#include "gpio_exp.h"
 #include "battery.h"
 #include "led.h"
 #include "monitor.h"
@@ -38,8 +39,11 @@ static const char *TAG = "services";
 /****************************************************************************************
  * 
  */
-void set_power_gpio(int gpio, char *value) {
+void set_chip_power_gpio(int gpio, char *value) {
 	bool parsed = true;
+
+	// we only parse on-chip GPIOs
+	if (gpio >= GPIO_NUM_MAX) return;
 	
 	if (!strcasecmp(value, "vcc") ) {
 		gpio_pad_select_gpio(gpio);
@@ -49,9 +53,26 @@ void set_power_gpio(int gpio, char *value) {
 		gpio_pad_select_gpio(gpio);
 		gpio_set_direction(gpio, GPIO_MODE_OUTPUT);
 		gpio_set_level(gpio, 0);
-	} else parsed = false	;
+	} else parsed = false;
 	
 	if (parsed) ESP_LOGI(TAG, "set GPIO %u to %s", gpio, value);
+}	
+
+void set_exp_power_gpio(int gpio, char *value) {
+	bool parsed = true;
+
+	// we only parse on-chip GPIOs
+	if (gpio < GPIO_NUM_MAX) return;
+	
+	if (!strcasecmp(value, "vcc") ) {
+		gpio_exp_set_direction(gpio, GPIO_MODE_OUTPUT, NULL);
+		gpio_exp_set_level(gpio, 1, true, NULL);
+	} else if (!strcasecmp(value, "gnd")) {
+		gpio_exp_set_direction(gpio, GPIO_MODE_OUTPUT, NULL);
+		gpio_exp_set_level(gpio, 0, true, NULL);
+	} else parsed = false;
+	
+	if (parsed) ESP_LOGI(TAG, "set expanded GPIO %u to %s", gpio, value);
  }	
  
 
@@ -69,8 +90,8 @@ void services_init(void) {
 	}
 #endif
 
-	// set potential power GPIO
-	parse_set_GPIO(set_power_gpio);
+	// set potential power GPIO on chip first in case expanders are power using these
+	parse_set_GPIO(set_chip_power_gpio);
 
 	// shared I2C bus 
 	const i2c_config_t * i2c_config = config_i2c_get(&i2c_system_port);
@@ -85,7 +106,7 @@ void services_init(void) {
 	}	
 
 	const spi_bus_config_t * spi_config = config_spi_get((spi_host_device_t*) &spi_system_host);
-	ESP_LOGI(TAG,"Configuring SPI data:%d clk:%d host:%u dc:%d", spi_config->mosi_io_num, spi_config->sclk_io_num, spi_system_host, spi_system_dc_gpio);
+	ESP_LOGI(TAG,"Configuring SPI mosi:%d miso:%d clk:%d host:%u dc:%d", spi_config->mosi_io_num, spi_config->miso_io_num, spi_config->sclk_io_num, spi_system_host, spi_system_dc_gpio);
 	
 	if (spi_config->mosi_io_num != -1 && spi_config->sclk_io_num != -1) {
 		spi_bus_initialize( spi_system_host, spi_config, 1 );
@@ -99,6 +120,13 @@ void services_init(void) {
 		spi_system_host = -1;
 		ESP_LOGW(TAG, "no SPI configured");
 	}	
+
+	// create GPIO expanders
+	const gpio_exp_config_t* gpio_exp_config;
+	for (int count = 0; (gpio_exp_config = config_gpio_exp_get(count)); count++) gpio_exp_create(gpio_exp_config);
+
+	// now set potential power GPIO on expander 
+	parse_set_GPIO(set_exp_power_gpio);
 
 	// system-wide PWM timer configuration
 	ledc_timer_config_t pwm_timer = {

@@ -15,7 +15,6 @@
 #include "accessors.h"
 #include "globdefs.h"
 #include "display.h"
-#include "display.h"
 #include "cJSON.h"
 #include "driver/gpio.h"
 #include "stdbool.h"
@@ -29,7 +28,6 @@
 #include "driver/gpio.h"
 #include "driver/spi_common_internal.h"
 #include "esp32/rom/efuse.h"
-#include "adac.h"
 #include "trace.h"
 #include "monitor.h"
 #include "messaging.h"
@@ -109,15 +107,15 @@ bool is_spdif_config_locked(){
 static void set_i2s_pin(char *config, i2s_pin_config_t *pin_config) {
 	char *p;
 	pin_config->bck_io_num = pin_config->ws_io_num = pin_config->data_out_num = pin_config->data_in_num = -1; 				
-	if ((p = strcasestr(config, "bck")) != NULL) pin_config->bck_io_num = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(config, "ws")) != NULL) pin_config->ws_io_num = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(config, "do")) != NULL) pin_config->data_out_num = atoi(strchr(p, '=') + 1);
+	if ((p = strcasestr(config, "bck"))) sscanf(p, "bck%*[^=]=%d", &pin_config->bck_io_num);
+	if ((p = strcasestr(config, "ws"))) sscanf(p, "ws%*[^=]=%d", &pin_config->ws_io_num);
+	if ((p = strcasestr(config, "do"))) sscanf(p, "do%*[^=]=%d", &pin_config->data_out_num);
 }
 
 /****************************************************************************************
  * Get i2s config structure from config string
  */
-const i2s_platform_config_t * config_get_i2s_from_str(char * dac_config ){
+const i2s_platform_config_t * config_i2s_get_from_str(char * dac_config ){
 	static i2s_platform_config_t i2s_dac_pin = {
 		.i2c_addr = -1,
 		.sda= -1,
@@ -129,15 +127,15 @@ const i2s_platform_config_t * config_get_i2s_from_str(char * dac_config ){
 	strcpy(i2s_dac_pin.model, "i2s");
 	char * p=NULL;
 
-	if ((p = strcasestr(dac_config, "i2c")) != NULL) i2s_dac_pin.i2c_addr = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(dac_config, "sda")) != NULL) i2s_dac_pin.sda = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(dac_config, "scl")) != NULL) i2s_dac_pin.scl = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(dac_config, "model")) != NULL) sscanf(p, "%*[^=]=%31[^,]", i2s_dac_pin.model);
-	if ((p = strcasestr(dac_config, "mute")) != NULL) {
+	PARSE_PARAM(dac_config, "i2c", '=', i2s_dac_pin.i2c_addr);
+	PARSE_PARAM(dac_config, "sda", '=', i2s_dac_pin.sda);
+	PARSE_PARAM(dac_config, "scl", '=', i2s_dac_pin.scl);
+	PARSE_PARAM_STR(dac_config, "model", '=', i2s_dac_pin.model, 31);
+	if ((p = strcasestr(dac_config, "mute"))) {
 		char mute[8] = "";
 		sscanf(p, "%*[^=]=%7[^,]", mute);
 		i2s_dac_pin.mute_gpio = atoi(mute);
-		if ((p = strchr(mute, ':')) != NULL) i2s_dac_pin.mute_level = atoi(p + 1);
+		PARSE_PARAM(p, "mute", ':', i2s_dac_pin.mute_level);
 	}	
 	return &i2s_dac_pin;
 }
@@ -147,8 +145,8 @@ const i2s_platform_config_t * config_get_i2s_from_str(char * dac_config ){
  */
 const i2s_platform_config_t * config_spdif_get( ){
 	char * spdif_config = config_spdif_get_string();
-	static i2s_platform_config_t i2s_dac_config;
-	memcpy(&i2s_dac_config, config_get_i2s_from_str(spdif_config), sizeof(i2s_dac_config));
+	static EXT_RAM_ATTR i2s_platform_config_t i2s_dac_config;
+	memcpy(&i2s_dac_config, config_i2s_get_from_str(spdif_config), sizeof(i2s_dac_config));
 	free(spdif_config);
 	return &i2s_dac_config;
 }
@@ -158,8 +156,8 @@ const i2s_platform_config_t * config_spdif_get( ){
  */
 const i2s_platform_config_t * config_dac_get(){
 	char * spdif_config = get_dac_config_string();
-	static i2s_platform_config_t i2s_dac_config;
-	memcpy(&i2s_dac_config, config_get_i2s_from_str(spdif_config), sizeof(i2s_dac_config));
+	static EXT_RAM_ATTR i2s_platform_config_t i2s_dac_config;
+	memcpy(&i2s_dac_config, config_i2s_get_from_str(spdif_config), sizeof(i2s_dac_config));
 	free(spdif_config);
 	return &i2s_dac_config;
 }
@@ -366,7 +364,7 @@ esp_err_t config_spi_set(const spi_bus_config_t * config, int host, int dc){
 	esp_err_t err = ESP_OK;
 	char * config_buffer=calloc(buffer_size,1);
 	if(config_buffer)  {
-		snprintf(config_buffer,buffer_size,"data=%u,clk=%u,dc=%u,host=%u",config->mosi_io_num,config->sclk_io_num,dc,host);
+		snprintf(config_buffer,buffer_size,"data=%u,clk=%u,dc=%u,host=%u,miso=%d",config->mosi_io_num,config->sclk_io_num,dc,host,config->miso_io_num);
 		log_send_messaging(MESSAGING_INFO,"Updating SPI configuration to %s",config_buffer);
 		err = config_set_value(NVS_TYPE_STR, "spi_config", config_buffer);
 		if(err!=ESP_OK){
@@ -407,16 +405,18 @@ const display_config_t * config_display_get(){
 		sscanf(p, "%*[^:]:%u", &dstruct.depth);
 		dstruct.drivername = display_conf_get_driver_name(strchr(p, '=') + 1);
 	}
-	
-	if ((p = strcasestr(config, "width")) != NULL) dstruct.width = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(config, "height")) != NULL) dstruct.height = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(config, "reset")) != NULL) dstruct.RST_pin = atoi(strchr(p, '=') + 1);
+
+	PARSE_PARAM(config, "width", '=', dstruct.width);
+	PARSE_PARAM(config, "height", '=', dstruct.height);
+	PARSE_PARAM(config, "reset", '=', dstruct.RST_pin);
+	PARSE_PARAM(config, "address", '=', dstruct.address);
+	PARSE_PARAM(config, "cs", '=', dstruct.CS_pin);
+	PARSE_PARAM(config, "speed", '=', dstruct.speed);
+	PARSE_PARAM(config, "back", '=', dstruct.back);
+
 	if (strstr(config, "I2C") ) dstruct.type=i2c_name_type;
-	if ((p = strcasestr(config, "address")) != NULL) dstruct.address = atoi(strchr(p, '=') + 1);
 	if (strstr(config, "SPI") ) dstruct.type=spi_name_type;
-	if ((p = strcasestr(config, "cs")) != NULL) dstruct.CS_pin = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(config, "speed")) != NULL) dstruct.speed = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(config, "back")) != NULL) dstruct.back = atoi(strchr(p, '=') + 1);
+
 	dstruct.hflip= strcasestr(config, "HFlip") ? true : false;
 	dstruct.vflip= strcasestr(config, "VFlip") ? true : false;
 	dstruct.rotate= strcasestr(config, "rotate") ? true : false;
@@ -427,7 +427,7 @@ const display_config_t * config_display_get(){
  * 
  */
 const i2c_config_t * config_i2c_get(int * i2c_port) {
-	char *nvs_item, *p;
+	char *nvs_item;
 	static i2c_config_t i2c = {
 		.mode = I2C_MODE_MASTER,
 		.sda_io_num = -1,
@@ -441,10 +441,10 @@ const i2c_config_t * config_i2c_get(int * i2c_port) {
 	
 	nvs_item = config_alloc_get(NVS_TYPE_STR, "i2c_config");
 	if (nvs_item) {
-		if ((p = strcasestr(nvs_item, "scl")) != NULL) i2c.scl_io_num = atoi(strchr(p, '=') + 1);
-		if ((p = strcasestr(nvs_item, "sda")) != NULL) i2c.sda_io_num = atoi(strchr(p, '=') + 1);
-		if ((p = strcasestr(nvs_item, "speed")) != NULL) i2c.master.clk_speed = atoi(strchr(p, '=') + 1);
-		if ((p = strcasestr(nvs_item, "port")) != NULL) i2c_system_port = atoi(strchr(p, '=') + 1);
+		PARSE_PARAM(nvs_item, "scl", '=', i2c.scl_io_num);
+		PARSE_PARAM(nvs_item, "sda", '=', i2c.sda_io_num);
+		PARSE_PARAM(nvs_item, "speed", '=', i2c.master.clk_speed);
+		PARSE_PARAM(nvs_item, "port", '=', i2c_system_port);
 		free(nvs_item);
 	}
 	if(i2c_port) {
@@ -456,6 +456,46 @@ const i2c_config_t * config_i2c_get(int * i2c_port) {
 	}
 	return &i2c;
 }
+
+/****************************************************************************************
+ * Get IO expander config structure from config string
+ */
+const gpio_exp_config_t* config_gpio_exp_get(int index) {
+	char *nvs_item, *item, *p;
+	static gpio_exp_config_t config;
+
+	// re-initialize config every time
+	memset(&config, 0, sizeof(config));
+	config.intr = -1; config.count = 16; config.base = GPIO_NUM_MAX; config.phy.port = i2c_system_port; config.phy.host = spi_system_host;
+
+	nvs_item = config_alloc_get(NVS_TYPE_STR, "gpio_exp_config");
+	if (!nvs_item || !*nvs_item) return NULL;
+
+	// search index items
+	for (item = strtok(nvs_item, ";"); index && item; index--) {
+		if ((item = strtok(NULL, ";")) == NULL) {
+			free(nvs_item);
+			return NULL;
+		}
+	}
+
+	PARSE_PARAM(item, "addr", '=', config.phy.addr);
+	PARSE_PARAM(item, "cs", '=', config.phy.cs_pin);
+	PARSE_PARAM(item, "speed", '=', config.phy.speed);
+	PARSE_PARAM(item, "intr", '=', config.intr);
+	PARSE_PARAM(item, "base", '=', config.base);
+	PARSE_PARAM(item, "count", '=', config.count);
+	PARSE_PARAM_STR(item, "model", '=', config.model, 31);
+
+	if ((p = strcasestr(item, "port")) != NULL) {
+		char port[8] = "";
+		sscanf(p, "%*[^=]=%7[^,]", port);
+		if (strcasestr(port, "dac")) config.phy.port = 0;
+	}	
+
+	free(nvs_item);
+	return &config;
+}	
 
 /****************************************************************************************
  * 
@@ -535,7 +575,7 @@ const set_GPIO_struct_t * get_gpio_struct(){
  * 
  */
 const spi_bus_config_t * config_spi_get(spi_host_device_t * spi_host) {
-	char *nvs_item, *p;
+	char *nvs_item;
 	static spi_bus_config_t spi = {
 		.mosi_io_num = -1,
         .sclk_io_num = -1,
@@ -546,10 +586,13 @@ const spi_bus_config_t * config_spi_get(spi_host_device_t * spi_host) {
 
 	nvs_item = config_alloc_get_str("spi_config", CONFIG_SPI_CONFIG, NULL);
 	if (nvs_item) {
-		if ((p = strcasestr(nvs_item, "data")) != NULL) spi.mosi_io_num = atoi(strchr(p, '=') + 1);
-		if ((p = strcasestr(nvs_item, "clk")) != NULL) spi.sclk_io_num = atoi(strchr(p, '=') + 1);
-		if ((p = strcasestr(nvs_item, "dc")) != NULL) spi_system_dc_gpio = atoi(strchr(p, '=') + 1);
-		if ((p = strcasestr(nvs_item, "host")) != NULL) spi_system_host = atoi(strchr(p, '=') + 1);
+		PARSE_PARAM(nvs_item, "data", '=', spi.mosi_io_num);
+		PARSE_PARAM(nvs_item, "mosi", '=', spi.mosi_io_num);
+		PARSE_PARAM(nvs_item, "miso", '=', spi.miso_io_num);
+		PARSE_PARAM(nvs_item, "clk", '=', spi.sclk_io_num);
+		PARSE_PARAM(nvs_item, "dc", '=', spi_system_dc_gpio);
+		// only VSPI (1) can be used as Flash and PSRAM run at 80MHz
+		// if ((p = strcasestr(nvs_item, "host")) != NULL) spi_system_host = atoi(strchr(p, '=') + 1);
 		free(nvs_item);
 	}
 	if(spi_host) *spi_host = spi_system_host;
@@ -584,11 +627,11 @@ const rotary_struct_t * config_rotary_get() {
 	char *config = config_alloc_get_default(NVS_TYPE_STR, "rotary_config", NULL, 0);
 	if (config && *config) {
 		char *p;
-		
+
 		// parse config
-		if ((p = strcasestr(config, "A")) != NULL) rotary.A = atoi(strchr(p, '=') + 1);
-		if ((p = strcasestr(config, "B")) != NULL) rotary.B = atoi(strchr(p, '=') + 1);
-		if ((p = strcasestr(config, "SW")) != NULL) rotary.SW = atoi(strchr(p, '=') + 1);
+		PARSE_PARAM(config, "A", '=', rotary.A);
+		PARSE_PARAM(config, "B", '=', rotary.B);
+		PARSE_PARAM(config, "SW", '=', rotary.SW);
 		if ((p = strcasestr(config, "knobonly")) != NULL) {
 			p = strchr(p, '=');
 			rotary.knobonly = true;
@@ -651,13 +694,10 @@ cJSON * add_gpio_for_value(cJSON * list,const char * name,int gpio, const char *
  */
 cJSON * add_gpio_for_name(cJSON * list,const char * nvs_entry,const char * name, const char * prefix, bool fixed){
 	cJSON * llist = list?list:cJSON_CreateArray();
-	char *p;
 	int gpioNum=0;
-	if ((p = strcasestr(nvs_entry, name)) != NULL) {
-		gpioNum = atoi(strchr(p, '=') + 1);
-		if(gpioNum>=0){
-			cJSON_AddItemToArray(llist,get_gpio_entry(name,prefix,gpioNum,fixed));
-		}
+	PARSE_PARAM(nvs_entry, name, '=', gpioNum);
+	if(gpioNum>=0){
+		cJSON_AddItemToArray(llist,get_gpio_entry(name,prefix,gpioNum,fixed));
 	}
 	return llist;
 }
@@ -987,26 +1027,18 @@ cJSON * get_gpio_list(bool refresh) {
 	}
 	gpio_list= cJSON_CreateArray();
 	
-#ifndef CONFIG_BAT_LOCKED
 	char *bat_config = config_alloc_get_default(NVS_TYPE_STR, "bat_config", NULL, 0);
 	if (bat_config) {
-		char *p;
-		int channel;
-		if ((p = strcasestr(bat_config, "channel") ) != NULL) {
-			channel = atoi(strchr(p, '=') + 1);
-			if(channel != -1){
-				if(adc1_pad_get_io_num(channel,&gpio_num )==ESP_OK){
-					cJSON_AddItemToArray(gpio_list,get_gpio_entry("bat","other",gpio_num,false));
-				}
+		int channel = -1;
+		PARSE_PARAM(bat_config, "channel", '=', channel);
+		if(channel != -1){
+			if(adc1_pad_get_io_num(channel,&gpio_num )==ESP_OK){
+				cJSON_AddItemToArray(gpio_list,get_gpio_entry("bat","other",gpio_num,false));
 			}
 		}
 		free(bat_config);
 	}
-#else
-		if(adc1_pad_get_io_num(CONFIG_BAT_CHANNEL,&gpio_num )==ESP_OK){
-			cJSON_AddItemToArray(gpio_list,get_gpio_entry("bat","other",gpio_num,true));
-		}
-#endif
+
 	gpio_list=get_GPIO_nvs_list(gpio_list);
 	gpio_list=get_SPDIF_GPIO(gpio_list,is_spdif_config_locked());
 	gpio_list=get_Rotary_GPIO(gpio_list);

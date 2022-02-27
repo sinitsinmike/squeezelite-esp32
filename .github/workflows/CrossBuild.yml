@@ -1,11 +1,12 @@
 # This is a basic workflow to help you get started with Actions
 name: Cross-Build
-
 on:
   push:
-    branches-ignore: [ master ]
+    branches: 
+      - 'master-cmake'
   pull_request:
-    branches-ignore: [ master ]
+    branches:
+      - 'master-cmake'
 
 jobs:
   job1:
@@ -25,8 +26,11 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        node: [I2S-4MFlash, SqueezeAmp]
+        node: [I2S-4MFlash, SqueezeAmp, Muse]
         depth: [16, 32]
+        exclude:
+          - node: Muse
+            depth: 32
     steps:
     - name: Set target name
       run: |

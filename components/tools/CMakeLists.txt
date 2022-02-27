@@ -1,5 +1,5 @@
-idf_component_register(SRCS operator.cpp utf8.c  
-						REQUIRES esp_common  pthread 
+idf_component_register(SRCS operator.cpp tools.c
+						REQUIRES esp_common pthread 
                     	INCLUDE_DIRS .
                     	)
 

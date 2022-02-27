@@ -95,7 +95,7 @@ struct GDS_Device {
 		const struct GDS_FontDef* Font;
 	} Lines[MAX_LINES];
 	
-	uint16_t Width;
+	uint16_t Width, TextWidth;
     uint16_t Height;
 	uint8_t Depth, Mode;
 	
@@ -124,6 +124,8 @@ struct GDS_Device {
 	// may provide for optimization
 	void (*DrawRGB)( struct GDS_Device* Device, uint8_t *Image,int x, int y, int Width, int Height, int RGB_Mode );
 	void (*ClearWindow)( struct GDS_Device* Device, int x1, int y1, int x2, int y2, int Color );
+	// may provide for tweaking
+	void (*SPIParams)(int Speed, uint8_t *mode, uint8_t *CS_pre, uint8_t *CS_post);
 		    
 	// interface-specific methods	
     WriteCommandProc WriteCommand;

@@ -73,13 +73,13 @@ void GDS_FontDrawChar( struct GDS_Device* Device, char Character, int x, int y, 
         CharStartY+= OffsetY;
 
         /* Do not attempt to draw if this character is entirely offscreen */
-        if ( CharEndX < 0 || CharStartX >= Device->Width || CharEndY < 0 || CharStartY >= Device->Height ) {
+        if ( CharEndX < 0 || CharStartX >= Device->TextWidth || CharEndY < 0 || CharStartY >= Device->Height ) {
             ClipDebug( x, y );
             return;
         }
 
         /* Do not attempt to draw past the end of the screen */
-        CharEndX = ( CharEndX >= Device->Width ) ? Device->Width - 1 : CharEndX;
+        CharEndX = ( CharEndX >= Device->TextWidth ) ? Device->TextWidth - 1 : CharEndX;
         CharEndY = ( CharEndY >= Device->Height ) ? Device->Height - 1 : CharEndY;
 		Device->Dirty = true;
 
@@ -98,12 +98,14 @@ void GDS_FontDrawChar( struct GDS_Device* Device, char Character, int x, int y, 
     }
 }
 
-bool GDS_SetFont( struct GDS_Device* Display, const struct GDS_FontDef* Font ) {
+const struct GDS_FontDef* GDS_SetFont( struct GDS_Device* Display, const struct GDS_FontDef* Font ) {
+	const struct GDS_FontDef* OldFont = Display->Font;
+
     Display->FontForceProportional = false;
     Display->FontForceMonospace = false;
     Display->Font = Font;
 
-    return true;
+    return OldFont;
 }
 
 void GDS_FontForceProportional( struct GDS_Device* Display, bool Force ) {
@@ -144,7 +146,7 @@ int GDS_FontGetCharWidth( struct GDS_Device* Display, char Character ) {
 }
 
 int GDS_FontGetMaxCharsPerRow( struct GDS_Device* Display ) {
-    return Display->Width / Display->Font->Width;
+    return Display->TextWidth / Display->Font->Width;
 }
 
 int GDS_FontGetMaxCharsPerColumn( struct GDS_Device* Display ) {
@@ -208,7 +210,7 @@ void GDS_FontGetAnchoredStringCoords( struct GDS_Device* Display, int* OutX, int
     switch ( Anchor ) {
         case TextAnchor_East: {
             *OutY = ( Display->Height / 2 ) - ( StringHeight / 2 );
-            *OutX = ( Display->Width - StringWidth );
+            *OutX = ( Display->TextWidth - StringWidth );
 
             break;
         }
@@ -219,19 +221,19 @@ void GDS_FontGetAnchoredStringCoords( struct GDS_Device* Display, int* OutX, int
             break;
         }
         case TextAnchor_North: {
-            *OutX = ( Display->Width / 2 ) - ( StringWidth / 2 );
+            *OutX = ( Display->TextWidth / 2 ) - ( StringWidth / 2 );
             *OutY = 0;
 
             break;
         }
         case TextAnchor_South: {
-            *OutX = ( Display->Width / 2 ) - ( StringWidth / 2 );
+            *OutX = ( Display->TextWidth / 2 ) - ( StringWidth / 2 );
             *OutY = ( Display->Height - StringHeight );
             
             break;
         }
         case TextAnchor_NorthEast: {
-            *OutX = ( Display->Width - StringWidth );
+            *OutX = ( Display->TextWidth - StringWidth );
             *OutY = 0;
 
             break;
@@ -244,7 +246,7 @@ void GDS_FontGetAnchoredStringCoords( struct GDS_Device* Display, int* OutX, int
         }
         case TextAnchor_SouthEast: {
             *OutY = ( Display->Height - StringHeight );
-            *OutX = ( Display->Width - StringWidth );
+            *OutX = ( Display->TextWidth - StringWidth );
 
             break;
         }
@@ -256,7 +258,7 @@ void GDS_FontGetAnchoredStringCoords( struct GDS_Device* Display, int* OutX, int
         }
         case TextAnchor_Center: {
             *OutY = ( Display->Height / 2 ) - ( StringHeight / 2 );
-            *OutX = ( Display->Width / 2 ) - ( StringWidth / 2 );
+            *OutX = ( Display->TextWidth / 2 ) - ( StringWidth / 2 );
 
             break;
         }

@@ -70,6 +70,7 @@ extern const uint8_t server_cert_pem_end[] asm("_binary_github_pem_end");
 extern void services_init(void);
 extern void	display_init(char *welcome);
 extern void led_vu_init(void);
+extern void target_init(char *target);
 const char * str_or_unknown(const char * str) { return (str?str:unknown_string_placeholder); }
 const char * str_or_null(const char * str) { return (str?str:null_string_placeholder); }
 bool is_recovery_running;
@@ -265,18 +266,37 @@ void register_default_nvs(){
 
 	esp_read_mac((uint8_t *)&mac, ESP_MAC_WIFI_STA);
 	snprintf(macStr, LOCAL_MAC_SIZE-1,"-%x%x%x", mac[3], mac[4], mac[5]);
-
-	DEFAULT_NAME_WITH_MAC(default_bt_name,CONFIG_BT_NAME);
-	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "bt_name", default_bt_name);
-	config_set_default(NVS_TYPE_STR, "bt_name", default_bt_name, 0);
-
+	
 	DEFAULT_NAME_WITH_MAC(default_host_name,DEFAULT_HOST_NAME);
 	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "host_name", default_host_name);
 	config_set_default(NVS_TYPE_STR, "host_name", default_host_name, 0);
 
+#if CONFIG_BT_SINK
+	DEFAULT_NAME_WITH_MAC(default_bt_name,CONFIG_BT_NAME);
+	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "bt_name", default_bt_name);
+	config_set_default(NVS_TYPE_STR, "bt_name", default_bt_name, 0);
+	
+	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "enable_bt_sink", STR(CONFIG_BT_SINK));
+	config_set_default(NVS_TYPE_STR, "enable_bt_sink", STR(CONFIG_BT_SINK), 0);
+
+	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "bt_sink_pin", STR(CONFIG_BT_SINK_PIN));
+	config_set_default(NVS_TYPE_STR, "bt_sink_pin", STR(CONFIG_BT_SINK_PIN), 0);
+	
+	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "bt_sink_volume", "127");
+	config_set_default(NVS_TYPE_STR, "bt_sink_volume", "127", 0);
+#endif	
+
+#if CONFIG_AIRPLAY_SINK
 	DEFAULT_NAME_WITH_MAC(default_airplay_name,CONFIG_AIRPLAY_NAME);
 	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "airplay_name",default_airplay_name);
 	config_set_default(NVS_TYPE_STR, "airplay_name",default_airplay_name , 0);
+	
+	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "airplay_port", CONFIG_AIRPLAY_PORT);
+	config_set_default(NVS_TYPE_STR, "airplay_port", CONFIG_AIRPLAY_PORT, 0);
+	
+	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "enable_airplay", STR(CONFIG_AIRPLAY_SINK));
+	config_set_default(NVS_TYPE_STR, "enable_airplay", STR(CONFIG_AIRPLAY_SINK), 0);
+#endif	
 
 	DEFAULT_NAME_WITH_MAC(default_ap_name,CONFIG_DEFAULT_AP_SSID);
 	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "ap_ssid", default_ap_name);
@@ -319,9 +339,6 @@ void register_default_nvs(){
 	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "ap_pwd", CONFIG_DEFAULT_AP_PASSWORD);
 	config_set_default(NVS_TYPE_STR, "ap_pwd", CONFIG_DEFAULT_AP_PASSWORD, 0);
 
-	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "airplay_port", CONFIG_AIRPLAY_PORT);
-	config_set_default(NVS_TYPE_STR, "airplay_port", CONFIG_AIRPLAY_PORT, 0);
-
 	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "a2dp_dev_name", CONFIG_A2DP_DEV_NAME);
 	config_set_default(NVS_TYPE_STR, "a2dp_dev_name", CONFIG_A2DP_DEV_NAME, 0);
 
@@ -353,20 +370,11 @@ void register_default_nvs(){
 	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "ota_prio", number_buffer);
 	config_set_default(NVS_TYPE_STR, "ota_prio", number_buffer, 0);
 
-	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "enable_bt_sink", STR(CONFIG_BT_SINK));
-	config_set_default(NVS_TYPE_STR, "enable_bt_sink", STR(CONFIG_BT_SINK), 0);
-
-	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "bt_sink_pin", STR(CONFIG_BT_SINK_PIN));
-	config_set_default(NVS_TYPE_STR, "bt_sink_pin", STR(CONFIG_BT_SINK_PIN), 0);
-	
-	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "bt_sink_volume", "127");
-	config_set_default(NVS_TYPE_STR, "bt_sink_volume", "127", 0);
-	
-	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "enable_airplay", STR(CONFIG_AIRPLAY_SINK));
-	config_set_default(NVS_TYPE_STR, "enable_airplay", STR(CONFIG_AIRPLAY_SINK), 0);
-
 	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "display_config", CONFIG_DISPLAY_CONFIG);
 	config_set_default(NVS_TYPE_STR, "display_config", CONFIG_DISPLAY_CONFIG, 0);
+	
+	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "eth_config", CONFIG_ETH_CONFIG);
+	config_set_default(NVS_TYPE_STR, "eth_config", CONFIG_ETH_CONFIG, 0);
 	
 	ESP_LOGD(TAG,"Registering default value for key %s, value %s", "i2c_config", CONFIG_I2C_CONFIG);
 	config_set_default(NVS_TYPE_STR, "i2c_config", CONFIG_I2C_CONFIG, 0);
@@ -385,12 +393,15 @@ void register_default_nvs(){
 	
 	ESP_LOGD(TAG,"Registering default value for key %s", "dac_config");
 	config_set_default(NVS_TYPE_STR, "dac_config", "", 0);
-	//todo: add dac_config for known targets
+	
 	ESP_LOGD(TAG,"Registering default value for key %s", "dac_controlset");
 	config_set_default(NVS_TYPE_STR, "dac_controlset", "", 0);
 	
 	ESP_LOGD(TAG,"Registering default value for key %s", "jack_mutes_amp");
 	config_set_default(NVS_TYPE_STR, "jack_mutes_amp", "n", 0);
+
+	ESP_LOGD(TAG,"Registering default value for key %s", "gpio_exp_config");
+	config_set_default(NVS_TYPE_STR, "gpio_exp_config", CONFIG_GPIO_EXP_CONFIG, 0);
 	
 	ESP_LOGD(TAG,"Registering default value for key %s", "bat_config");
 	config_set_default(NVS_TYPE_STR, "bat_config", "", 0);
@@ -412,6 +423,9 @@ void register_default_nvs(){
 
 	ESP_LOGD(TAG,"Registering default value for key %s", "rel_api");
 	config_set_default(NVS_TYPE_STR, "rel_api", CONFIG_RELEASE_API, 0);
+	
+	ESP_LOGD(TAG,"Registering default value for key %s", "target");
+	config_set_default(NVS_TYPE_STR, "target", "", 0);
 
 	ESP_LOGD(TAG,"Registering default value for key %s", "led_vu_config");
 	config_set_default(NVS_TYPE_STR, "led_vu_config", "", 0);
@@ -427,6 +441,7 @@ void handle_ap_connect(){
 	start_telnet(NULL);
 	halSTORAGE_RebootCounterUpdate(0);
 }
+
 void app_main()
 {
 	const esp_partition_t *running = esp_ota_get_running_partition();
@@ -467,6 +482,12 @@ void app_main()
 
 	ESP_LOGI(TAG,"Initializing display");
 	display_init("SqueezeESP32");
+	
+	char *target = config_alloc_get_str("target", CONFIG_TARGET, NULL);
+	if (target) {
+		target_init(target);
+		free(target);
+	}	
 
 	ESP_LOGI(TAG,"Initializing led_vu");
 	led_vu_init();
@@ -502,7 +523,7 @@ void app_main()
 
 	if(!is_recovery_running){
 		ESP_LOGD(TAG,"Getting audio control mapping ");
-		char *actrls_config = config_alloc_get_default(NVS_TYPE_STR, "actrls_config", NULL, 0);
+		char *actrls_config = config_alloc_get_default(NVS_TYPE_STR, "actrls_config", "", 0);
 		if (actrls_init(actrls_config) == ESP_OK) {
 			ESP_LOGD(TAG,"Initializing audio control buttons type %s", actrls_config);	
 		} else {

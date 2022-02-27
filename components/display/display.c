@@ -20,6 +20,7 @@
 #include "gds_draw.h"
 #include "gds_text.h"
 #include "gds_font.h"
+#include "gds_image.h"
 
 static const char *TAG = "display";
 
@@ -30,6 +31,9 @@ static const char *TAG = "display";
 #define SCROLLABLE_SIZE			384
 #define HEADER_SIZE				64
 #define	DEFAULT_SLEEP			3600
+#define ARTWORK_BORDER			1
+
+extern const uint8_t default_artwork[]   asm("_binary_note_jpg_start");
 
 static EXT_RAM_ATTR struct {
 	TaskHandle_t task;
@@ -41,7 +45,19 @@ static EXT_RAM_ATTR struct {
 	int offset, boundary;
 	char *metadata_config;
 	bool timer, refresh;
-	uint32_t elapsed, duration;
+	uint32_t elapsed;
+	struct {
+		uint32_t value;
+		char string[8]; // H:MM:SS
+		bool visible;
+	} duration;
+	struct {
+		bool enable, active;
+		bool fit;
+		bool updated;
+		int tick;
+		int offset;
+	}  artwork;
 	TickType_t tick;
 } displayer;
 
@@ -71,11 +87,11 @@ void display_init(char *welcome) {
 	char *config = config_alloc_get_str("display_config", CONFIG_DISPLAY_CONFIG, "N/A");
 	
 	int width = -1, height = -1, backlight_pin = -1;
-	char *p, *drivername = strstr(config, "driver");
+	char *drivername = strstr(config, "driver");
 
-	if ((p = strcasestr(config, "width")) != NULL) width = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(config, "height")) != NULL) height = atoi(strchr(p, '=') + 1);
-	if ((p = strcasestr(config, "back")) != NULL) backlight_pin = atoi(strchr(p, '=') + 1);	
+	PARSE_PARAM(config, "width", '=', width);
+	PARSE_PARAM(config, "height", '=', height);
+	PARSE_PARAM(config, "back", '=', backlight_pin);
 		
 	// query drivers to see if we have a match
 	ESP_LOGI(TAG, "Trying to configure display with %s", config);
@@ -89,24 +105,24 @@ void display_init(char *welcome) {
 	// so far so good
 	if (display && width > 0 && height > 0) {
 		int RST_pin = -1;
-		if ((p = strcasestr(config, "reset")) != NULL) RST_pin = atoi(strchr(p, '=') + 1);
+		PARSE_PARAM(config, "reset", '=', RST_pin);
 		
 		// Detect driver interface
-		if (strstr(config, "I2C") && i2c_system_port != -1) {
+		if (strcasestr(config, "I2C") && i2c_system_port != -1) {
 			int address = 0x3C;
 				
-			if ((p = strcasestr(config, "address")) != NULL) address = atoi(strchr(p, '=') + 1);
+			PARSE_PARAM(config, "address", '=', address);
 				
 			init = true;
 			GDS_I2CInit( i2c_system_port, -1, -1, i2c_system_speed ) ;
 			GDS_I2CAttachDevice( display, width, height, address, RST_pin, backlight_pin );
 		
 			ESP_LOGI(TAG, "Display is I2C on port %u", address);
-		} else if (strstr(config, "SPI") && spi_system_host != -1) {
+		} else if (strcasestr(config, "SPI") && spi_system_host != -1) {
 			int CS_pin = -1, speed = 0;
 		
-			if ((p = strcasestr(config, "cs")) != NULL) CS_pin = atoi(strchr(p, '=') + 1);
-			if ((p = strcasestr(config, "speed")) != NULL) speed = atoi(strchr(p, '=') + 1);
+			PARSE_PARAM(config, "cs", '=', CS_pin);
+			PARSE_PARAM(config, "speed", '=', speed);
 		
 			init = true;
 			GDS_SPIInit( spi_system_host, spi_system_dc_gpio );
@@ -126,7 +142,7 @@ void display_init(char *welcome) {
 		static DRAM_ATTR StaticTask_t xTaskBuffer __attribute__ ((aligned (4)));
 		static EXT_RAM_ATTR StackType_t xStack[DISPLAYER_STACK_SIZE] __attribute__ ((aligned (4)));
 		
-		GDS_SetLayout( display, strcasestr(config, "HFlip"), strcasestr(config, "VFlip"), strcasestr(config, "rotate"));
+		GDS_SetLayout(display, strcasestr(config, "HFlip"), strcasestr(config, "VFlip"), strcasestr(config, "rotate"));
 		GDS_SetFont(display, &Font_droid_sans_fallback_15x17 );
 		GDS_TextPos(display, GDS_FONT_MEDIUM, GDS_TEXT_CENTERED, GDS_TEXT_CLEAR | GDS_TEXT_UPDATE, welcome);
 
@@ -142,6 +158,14 @@ void display_init(char *welcome) {
 		GDS_TextSetFontAuto(display, 2, GDS_FONT_LINE_2, -3);
 		
 		displayer.metadata_config = config_alloc_get(NVS_TYPE_STR, "metadata_config");
+		
+		// leave room for artwork is display is horizontal-style
+		if (strcasestr(displayer.metadata_config, "artwork")) {
+			displayer.artwork.enable = true;
+			displayer.artwork.fit = true;
+			if (height <= 64 && width > height * 2) displayer.artwork.offset = width - height - ARTWORK_BORDER;
+			PARSE_PARAM(displayer.metadata_config, "artwork", ':', displayer.artwork.fit);
+		}	
 	}
 	
 	free(config);
@@ -193,18 +217,39 @@ static void displayer_task(void *args) {
 		
 		// handler elapsed track time
 		if (displayer.timer && displayer.state == DISPLAYER_ACTIVE) {
-			char counter[16];
+			char line[19] = "-", *_line = line + 1; // [-]H:MM:SS / H:MM:SS
 			TickType_t tick = xTaskGetTickCount();
 			uint32_t elapsed = (tick - displayer.tick) * portTICK_PERIOD_MS;
-			
+
 			if (elapsed >= 1000) {
 				xSemaphoreTake(displayer.mutex, portMAX_DELAY);
 				displayer.tick = tick;
-				displayer.elapsed += elapsed / 1000;
-				xSemaphoreGive(displayer.mutex);				
-				if (displayer.elapsed < 3600) snprintf(counter, 16, "%5u:%02u", displayer.elapsed / 60, displayer.elapsed % 60);
-				else snprintf(counter, 16, "%2u:%02u:%02u", displayer.elapsed / 3600, (displayer.elapsed % 3600) / 60, displayer.elapsed % 60);
-				GDS_TextLine(display, 1, GDS_TEXT_RIGHT, (GDS_TEXT_CLEAR | GDS_TEXT_CLEAR_EOL) | GDS_TEXT_UPDATE, counter);
+				elapsed = displayer.elapsed += elapsed / 1000;
+				xSemaphoreGive(displayer.mutex);
+
+				// when we have duration but no space, display remaining time
+				if (displayer.duration.value && !displayer.duration.visible) elapsed = displayer.duration.value - elapsed;
+
+				if (elapsed < 3600) sprintf(_line, "%u:%02u", elapsed / 60, elapsed % 60);
+				else sprintf(_line, "%u:%02u:%02u", (elapsed / 3600) % 100, (elapsed % 3600) / 60, elapsed % 60);
+
+				// concatenate if we have room for elapsed / duration
+				if (displayer.duration.visible) {
+					strcat(_line, "/");
+					strcat(_line, displayer.duration.string);
+				} else if (displayer.duration.value) {
+					_line--;
+				}
+
+				// just re-write the whole line it's easier
+				GDS_TextLine(display, 1, GDS_TEXT_LEFT, GDS_TEXT_CLEAR, displayer.header);	
+				GDS_TextLine(display, 1, GDS_TEXT_RIGHT, GDS_TEXT_UPDATE, _line);
+				
+				// if we have not received artwork after 5s, display a default icon
+				if (displayer.artwork.active && !displayer.artwork.updated && tick - displayer.artwork.tick > pdMS_TO_TICKS(5000)) {
+					ESP_LOGI(TAG, "no artwork received, setting default");
+					displayer_artwork((uint8_t*) default_artwork);
+				}	
 				timer_sleep = 1000;
 			} else timer_sleep = max(1000 - elapsed, 0);	
 		} else timer_sleep = DEFAULT_SLEEP;
@@ -216,6 +261,32 @@ static void displayer_task(void *args) {
 		vTaskDelay(sleep / portTICK_PERIOD_MS);
 	}
 }	
+
+/****************************************************************************************
+ * 
+ */
+void displayer_artwork(uint8_t *data) {
+	if (!displayer.artwork.active) return;
+	
+	int x = displayer.artwork.offset ? displayer.artwork.offset + ARTWORK_BORDER : 0;
+	int y = x ? 0 : 32;
+	GDS_ClearWindow(display, x, y, -1, -1, GDS_COLOR_BLACK);
+	if (data) {
+		displayer.artwork.updated = true;
+		GDS_DrawJPEG(display, data, x, y, GDS_IMAGE_CENTER | (displayer.artwork.fit ? GDS_IMAGE_FIT : 0));
+	} else {
+		displayer.artwork.updated = false;
+		displayer.artwork.tick = xTaskGetTickCount();
+	}	
+	
+}
+
+/****************************************************************************************
+ * 
+ */
+bool displayer_can_artwork(void) {
+	return displayer.artwork.active;
+}
 
 /****************************************************************************************
  * 
@@ -279,8 +350,8 @@ void displayer_metadata(char *artist, char *album, char *title) {
 	}
 	
 	// get optional scroll speed & pause
-	if ((p = strcasestr(displayer.metadata_config, "speed")) != NULL) sscanf(p, "%*[^=]=%d", &displayer.speed);
-	if ((p = strcasestr(displayer.metadata_config, "pause")) != NULL) sscanf(p, "%*[^=]=%d", &displayer.pause);
+	PARSE_PARAM(displayer.metadata_config, "speed", '=', displayer.speed);
+	PARSE_PARAM(displayer.metadata_config, "pause", '=', displayer.pause);
 	
 	displayer.offset = 0;	
 	utf8_decode(displayer.string);
@@ -318,9 +389,27 @@ void displayer_timer(enum displayer_time_e mode, int elapsed, int duration) {
 	
 	xSemaphoreTake(displayer.mutex, portMAX_DELAY);
 
-	if (elapsed >= 0) displayer.elapsed = elapsed / 1000;	
-	if (duration >= 0) displayer.duration = duration / 1000;
 	if (displayer.timer) displayer.tick = xTaskGetTickCount();
+	if (elapsed >= 0) displayer.elapsed = elapsed / 1000;	
+	if (duration > 0) {
+		displayer.duration.visible = true;
+		displayer.duration.value = duration / 1000;
+
+		if (displayer.duration.value > 3600) sprintf(displayer.duration.string, "%u:%02u:%02u", (displayer.duration.value / 3600) % 10,
+													(displayer.duration.value % 3600) / 60, displayer.duration.value % 60);
+		else sprintf(displayer.duration.string, "%u:%02u", displayer.duration.value / 60, displayer.duration.value % 60);
+
+		char *buf;
+		asprintf(&buf, "%s %s/%s", displayer.header, displayer.duration.string, displayer.duration.string);
+		if (GDS_GetTextWidth(display, 1, 0, buf) > GDS_GetWidth(display)) {
+			ESP_LOGW(TAG, "Can't fit duration %s (%d) on screen using elapsed only", buf, GDS_GetTextWidth(display, 1, 0, buf));
+			displayer.duration.visible = false;
+		}
+		free(buf);
+	} else if (!duration) {
+		displayer.duration.visible = false;
+		displayer.duration.value = 0;
+	}
 		
 	xSemaphoreGive(displayer.mutex);
 }	
@@ -339,25 +428,31 @@ void displayer_control(enum displayer_cmd_e cmd, ...) {
 	switch(cmd) {
 	case DISPLAYER_ACTIVATE: {	
 		char *header = va_arg(args, char*);
+		displayer.artwork.active = displayer.artwork.enable && va_arg(args, int);
 		strncpy(displayer.header, header, HEADER_SIZE);
 		displayer.header[HEADER_SIZE] = '\0';
 		displayer.state = DISPLAYER_ACTIVE;
 		displayer.timer = false;
 		displayer.refresh = true;
 		displayer.string[0] = '\0';
-		displayer.elapsed = displayer.duration = 0;
+		displayer.elapsed = displayer.duration.value = 0;
+		displayer.duration.visible = false;
 		displayer.offset = displayer.boundary = 0;
 		display_bus(&displayer, DISPLAY_BUS_TAKE);
+		if (displayer.artwork.active) GDS_SetTextWidth(display, displayer.artwork.offset);
 		vTaskResume(displayer.task);
 		break;
 	}	
 	case DISPLAYER_SUSPEND:		
 		// task will display the line 2 from beginning and suspend
 		displayer.state = DISPLAYER_IDLE;
+		displayer_artwork(NULL);
 		display_bus(&displayer, DISPLAY_BUS_GIVE);
 		break;		
 	case DISPLAYER_SHUTDOWN:
 		// let the task self-suspend (we might be doing i2c_write)
+		GDS_SetTextWidth(display, 0);
+		displayer_artwork(NULL);
 		displayer.state = DISPLAYER_DOWN;
 		display_bus(&displayer, DISPLAY_BUS_GIVE);
 		break;

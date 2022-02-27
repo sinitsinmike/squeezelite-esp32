@@ -99,13 +99,13 @@ bool GDS_TextLine(struct GDS_Device* Device, int N, int Pos, int Attr, char *Tex
 	Width = GDS_FontMeasureString( Device, Text );
 	
 	// adjusting position, erase only EoL for rigth-justified
-	if (Pos == GDS_TEXT_RIGHT) X = Device->Width - Width - 1;
-	else if (Pos == GDS_TEXT_CENTER) X = (Device->Width - Width) / 2;
+	if (Pos == GDS_TEXT_RIGHT) X = Device->TextWidth - Width - 1;
+	else if (Pos == GDS_TEXT_CENTER) X = (Device->TextWidth - Width) / 2;
 	
 	// erase if requested
 	if (Attr & GDS_TEXT_CLEAR) {
 		int Y_min = max(0, Device->Lines[N].Y), Y_max = max(0, Device->Lines[N].Y + Device->Lines[N].Font->Height);
-		for (int c = (Attr & GDS_TEXT_CLEAR_EOL) ? X : 0; c < Device->Width; c++) 
+		for (int c = (Attr & GDS_TEXT_CLEAR_EOL) ? X : 0; c < Device->TextWidth; c++) 
 			for (int y = Y_min; y < Y_max; y++)
 				DrawPixelFast( Device, c, y, GDS_COLOR_BLACK );
 	}
@@ -118,7 +118,20 @@ bool GDS_TextLine(struct GDS_Device* Device, int N, int Pos, int Attr, char *Tex
 	Device->Dirty = true;
 	if (Attr & GDS_TEXT_UPDATE) GDS_Update( Device );
 		
-	return Width + X < Device->Width;
+	return Width + X < Device->TextWidth;
+}
+
+/****************************************************************************************
+ * 
+ */
+int GDS_GetTextWidth(struct GDS_Device* Device, int N, int Attr, char *Text) {
+	const struct GDS_FontDef *Font = GDS_SetFont( Device, Device->Lines[N-1].Font );	
+
+	if (Attr & GDS_TEXT_MONOSPACE) GDS_FontForceMonospace( Device, true );
+	int Width = GDS_FontMeasureString( Device, Text );
+	GDS_SetFont( Device, Font );
+
+	return Width;
 }
 
 /****************************************************************************************
@@ -132,7 +145,7 @@ int GDS_TextStretch(struct GDS_Device* Device, int N, char *String, int Max) {
 	
 	// we might already fit
 	GDS_SetFont( Device, Device->Lines[N].Font );	
-	if (GDS_FontMeasureString( Device, String ) <= Device->Width) return 0;
+	if (GDS_FontMeasureString( Device, String ) <= Device->TextWidth) return 0;
 		
 	// add some space for better visual 
 	strncat(String, Space, Max-Len);
@@ -143,7 +156,7 @@ int GDS_TextStretch(struct GDS_Device* Device, int N, char *String, int Max) {
 	Boundary = GDS_FontMeasureString( Device, String );
 			
 	// add a full display width	
-	while (Len < Max && GDS_FontMeasureString( Device, String ) - Boundary < Device->Width) {
+	while (Len < Max && GDS_FontMeasureString( Device, String ) - Boundary < Device->TextWidth) {
 		String[Len++] = String[Extra++];
 		String[Len] = '\0';
 	}

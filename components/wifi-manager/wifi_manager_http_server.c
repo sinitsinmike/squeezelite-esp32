@@ -22,7 +22,6 @@
 #include "http_server_handlers.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
-#include "_esp_http_server.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -135,14 +134,16 @@ esp_err_t http_server_start()
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 25;
-    config.max_open_sockets = 8;
+    config.max_open_sockets = 3;
+	config.lru_purge_enable = true;
+	config.backlog_conn = 1;
     config.uri_match_fn = httpd_uri_match_wildcard;
 	config.task_priority = ESP_TASK_PRIO_MIN;
     //todo:  use the endpoint below to configure session token?
     // config.open_fn
 
     ESP_LOGD(TAG, "Starting HTTP Server");
-    esp_err_t err= __httpd_start(&_server, &config);
+    esp_err_t err= httpd_start(&_server, &config);
     if(err != ESP_OK){
     	ESP_LOGE_LOC(TAG,"Start server failed");
     }

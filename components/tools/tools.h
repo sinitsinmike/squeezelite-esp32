@@ -10,4 +10,13 @@
  
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void utf8_decode(char *src);
+void url_decode(char *url);
+
+#ifdef __cplusplus
+}
+#endif

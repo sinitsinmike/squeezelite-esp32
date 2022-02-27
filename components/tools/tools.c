@@ -1,16 +1,30 @@
+/* 
+ *  (c) Philippe G. 20201, philippe_44@outlook.com
+ *	see other copyrights below
+ *
+ *  This software is released under the MIT License.
+ *  https://opensource.org/licenses/MIT
+ *
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <ctype.h>
+#include "tools.h"
+#include "esp_log.h"
+
+const static char TAG[] = "tools";
+
+/****************************************************************************************
+ * UTF-8 tools
+ */
+
 // Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 // See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
 // Copyright (c) 2017 ZephRay <zephray@outlook.com>
 //
 // utf8to1252 - almost equivalent to iconv -f utf-8 -t windows-1252, but better
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include "esp_log.h"
-
-#define TAG "aa"
 
 #define UTF8_ACCEPT 0
 #define UTF8_REJECT 1
@@ -90,4 +104,27 @@ void utf8_decode(char *src) {
 	}
 	
 	*dst = '\0';
+}
+
+/****************************************************************************************
+ * URL tools
+ */
+
+static inline char from_hex(char ch) {
+  return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
+}
+
+void url_decode(char *url) {
+	char *p, *src = strdup(url);
+	for (p = src; *src; url++) {
+		*url = *src++;
+		if (*url == '%') {
+			*url = from_hex(*src++) << 4;
+			*url |= from_hex(*src++);
+		} else if (*url == '+') {
+			*url = ' ';
+		}
+	}
+	*url = '\0';
+	free(p);
 }

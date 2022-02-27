@@ -353,6 +353,8 @@ static esp_err_t set_content_type_from_req(httpd_req_t *req)
 	   return ESP_FAIL;
    }
    set_content_type_from_file(req, filename);
+   // we might have to disallow keep-alive in the future
+   // httpd_resp_set_hdr(req, "Connection", "close");
    return ESP_OK;
 }
 
@@ -508,7 +510,8 @@ esp_err_t console_cmd_post_handler(httpd_req_t *req){
 	}
 	else{
 		// navigate to the first child of the config structure
-		if(run_command(cJSON_GetStringValue(item))!=ESP_OK){
+		char *cmd = cJSON_GetStringValue(item);
+		if(!console_push(cmd, strlen(cmd) + 1)){
 			httpd_resp_send(req, (const char *)failed, strlen(failed));
 		}
 		else {

@@ -111,7 +111,7 @@ extern char private_key[];
 static void on_dmap_string(void *ctx, const char *code, const char *name, const char *buf, size_t len);
 
 /*----------------------------------------------------------------------------*/
-struct raop_ctx_s *raop_create(struct in_addr host, char *name,
+struct raop_ctx_s *raop_create(uint32_t host, char *name,
 						unsigned char mac[6], int latency,
 						raop_cmd_cb_t cmd_cb, raop_data_cb_t data_cb) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
@@ -150,7 +150,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, char *name,
 #ifdef WIN32
 	ctx->svr = glmDNSServer;
 #endif
-	ctx->host = host;
+	ctx->host.s_addr = host;
 	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
 	ctx->cmd_cb = cmd_cb;
 	ctx->data_cb = data_cb;
@@ -162,7 +162,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, char *name,
 	}
 
 	memset(&addr, 0, sizeof(addr));
-	addr.sin_addr.s_addr = host.s_addr;
+	addr.sin_addr.s_addr = host;
 	addr.sin_family = AF_INET;
 #ifdef WIN32
 	ctx->port = 0;
@@ -196,7 +196,8 @@ struct raop_ctx_s *raop_create(struct in_addr host, char *name,
 	ESP_ERROR_CHECK( mdns_service_add(id, "_raop", "_tcp", ctx->port, txt, sizeof(txt) / sizeof(mdns_txt_item_t)) );
 	
     ctx->xTaskBuffer = (StaticTask_t*) heap_caps_malloc(sizeof(StaticTask_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-	ctx->thread = xTaskCreateStatic( (TaskFunction_t) rtsp_thread, "RTSP_thread", RTSP_STACK_SIZE, ctx, ESP_TASK_PRIO_MIN + 2, ctx->xStack, ctx->xTaskBuffer);
+	ctx->thread = xTaskCreateStaticPinnedToCore( (TaskFunction_t) rtsp_thread, "RTSP", RTSP_STACK_SIZE, ctx, 
+												 ESP_TASK_PRIO_MIN + 2, ctx->xStack, ctx->xTaskBuffer, CONFIG_PTHREAD_TASK_CORE_DEFAULT);
 #endif
 
 	return ctx;
@@ -255,7 +256,7 @@ void raop_delete(struct raop_ctx_s *ctx) {
 	vTaskDelay(100 / portTICK_PERIOD_MS);
 	ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
 	vTaskDelete(ctx->thread);
-	heap_caps_free(ctx->xTaskBuffer);
+	SAFE_PTR_FREE(ctx->xTaskBuffer);
 
 	// cleanup all session-created items
 	cleanup_rtsp(ctx, true);
@@ -518,22 +519,26 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		ctx->active_remote.running = true;
 		ctx->active_remote.destroy_mutex = xSemaphoreCreateBinary();
 		ctx->active_remote.xTaskBuffer = (StaticTask_t*) heap_caps_malloc(sizeof(StaticTask_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-		ctx->active_remote.thread = xTaskCreateStatic( (TaskFunction_t) search_remote, "search_remote", SEARCH_STACK_SIZE, ctx, ESP_TASK_PRIO_MIN + 2, ctx->active_remote.xStack, ctx->active_remote.xTaskBuffer);
+		ctx->active_remote.thread = xTaskCreateStaticPinnedToCore( (TaskFunction_t) search_remote, "search_remote", SEARCH_STACK_SIZE, ctx, 
+																	ESP_TASK_PRIO_MIN + 2, ctx->active_remote.xStack, ctx->active_remote.xTaskBuffer,
+																	CONFIG_PTHREAD_TASK_CORE_DEFAULT );
 #endif		
 
 	} else if (!strcmp(method, "SETUP") && ((buf = kd_lookup(headers, "Transport")) != NULL)) {
 		char *p;
 		rtp_resp_t rtp = { 0 };
 		short unsigned tport = 0, cport = 0;
+		uint8_t *buffer = NULL;
+		size_t size = 0;
 
-		// we are about to stream, do something if needed
-		success = ctx->cmd_cb(RAOP_SETUP);
+		// we are about to stream, do something if needed and optionally give buffers to play with
+		success = ctx->cmd_cb(RAOP_SETUP, &buffer, &size);
 
 		if ((p = strcasestr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
 		if ((p = strcasestr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
 		rtp = rtp_init(ctx->peer, ctx->latency,	ctx->rtsp.aeskey, ctx->rtsp.aesiv,
-					   ctx->rtsp.fmtp, cport, tport, ctx->cmd_cb, ctx->data_cb);
+					   ctx->rtsp.fmtp, cport, tport, buffer, size, ctx->cmd_cb, ctx->data_cb);
 						
 		ctx->rtp = rtp.ctx;
 		
@@ -605,7 +610,6 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			sscanf(p, "%*[^:]:%u/%u/%u", &start, &current, &stop);
 			current = ((current - start) / 44100) * 1000;
 			if (stop) stop = ((stop - start) / 44100) * 1000;
-			else stop = -1;
 			LOG_INFO("[%p]: SET PARAMETER progress %d/%u %s", ctx, current, stop, p);
 			success = ctx->cmd_cb(RAOP_PROGRESS, max(current, 0), stop);
 		} else if (body && ((p = kd_lookup(headers, "Content-Type")) != NULL) && !strcasecmp(p, "application/x-dmap-tagged")) {
@@ -624,6 +628,9 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 				success = ctx->cmd_cb(RAOP_METADATA, metadata.artist, metadata.album, metadata.title);
 				free_metadata(&metadata);
 			}
+		} else if (body && ((p = kd_lookup(headers, "Content-Type")) != NULL) && strcasestr(p, "image/jpeg")) {			
+			LOG_INFO("[%p]: received JPEG image of %d bytes", ctx, len);
+			ctx->cmd_cb(RAOP_ARTWORK, body, len);
 		} else {
 			char *dump = kd_dump(headers);
 			LOG_INFO("Unhandled SET PARAMETER\n%s", dump);
@@ -672,9 +679,8 @@ void cleanup_rtsp(raop_ctx_t *ctx, bool abort) {
 		ctx->active_remote.running = false;
 		xSemaphoreTake(ctx->active_remote.destroy_mutex, portMAX_DELAY);
 		vTaskDelete(ctx->active_remote.thread);
+		SAFE_PTR_FREE(ctx->active_remote.xTaskBuffer);
 		vSemaphoreDelete(ctx->active_remote.thread);
-
-		heap_caps_free(ctx->active_remote.xTaskBuffer);
 #endif
 		memset(&ctx->active_remote, 0, sizeof(ctx->active_remote));
 		LOG_INFO("[%p]: Remote search thread aborted", ctx);
