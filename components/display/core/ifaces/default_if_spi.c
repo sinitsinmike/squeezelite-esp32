@@ -34,7 +34,7 @@ bool GDS_SPIInit( int SPI, int DC ) {
     return true;
 }
 
-bool GDS_SPIAttachDevice( struct GDS_Device* Device, int Width, int Height, int CSPin, int RSTPin, int BackLightPin, int Speed ) {
+bool GDS_SPIAttachDevice( struct GDS_Device* Device, int Width, int Height, int CSPin, int RSTPin, int BackLightPin, int Speed, int Mode ) {
     spi_device_interface_config_t SPIDeviceConfig = { };
     spi_device_handle_t SPIDevice;
 
@@ -48,13 +48,14 @@ bool GDS_SPIAttachDevice( struct GDS_Device* Device, int Width, int Height, int 
     SPIDeviceConfig.clock_speed_hz = Speed > 0 ? Speed : SPI_MASTER_FREQ_8M;
     SPIDeviceConfig.spics_io_num = CSPin;
     SPIDeviceConfig.queue_size = 1;
-	SPIDeviceConfig.flags = SPI_DEVICE_NO_DUMMY;
-	if (Device->SPIParams) Device->SPIParams(SPIDeviceConfig.clock_speed_hz, &SPIDeviceConfig.mode, 
-											 &SPIDeviceConfig.cs_ena_pretrans, &SPIDeviceConfig.cs_ena_posttrans);
+    SPIDeviceConfig.mode = Mode;
+
+    SPIDeviceConfig.flags = SPI_DEVICE_NO_DUMMY;
+    if (Device->SPIParams) Device->SPIParams(SPIDeviceConfig.clock_speed_hz, &SPIDeviceConfig.mode, &SPIDeviceConfig.cs_ena_pretrans, &SPIDeviceConfig.cs_ena_posttrans);
 	
     ESP_ERROR_CHECK_NONFATAL( spi_bus_add_device( SPIHost, &SPIDeviceConfig, &SPIDevice ), return false );
 	
-	Device->WriteCommand = SPIDefaultWriteCommand;
+    Device->WriteCommand = SPIDefaultWriteCommand;
     Device->WriteData = SPIDefaultWriteData;
     Device->SPIHandle = SPIDevice;
     Device->RSTPin = RSTPin;
