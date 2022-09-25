@@ -67,3 +67,4 @@ libs/
 /_*
 sdkconfig
 squeezelite-esp32-jsonblob.zip
+*.bak
