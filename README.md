@@ -296,7 +296,7 @@ The parameter "gpio_exp_config" is a semicolon (;) separated list with following
 ```
 model=<model>,addr=<addr>,[,port=system|dac][,base=<n>|100][,count=<n>|16][,intr=<gpio>][,cs=<gpio>][,speed=<Hz>]
 ```	
-- model: pca9535, pca85xx, mcp23017 and mcp23s17 (SPI version)
+- model: pca9535, pca85xx, mcp23017, mcp23s17 (SPI version) and mpr121
 - addr: chip i2c/spi address (decimal)
 - port (I2C): use either "system" port (shared with display for example) or "dac" port (system is default)
 - cs (SPI): gpio used for Chip Select
@@ -306,6 +306,8 @@ model=<model>,addr=<addr>,[,port=system|dac][,base=<n>|100][,count=<n>|16][,intr
 - intr: real GPIO to use as interrupt.
 	
 Note that PWM ("led_brightness" below) is not supported for expanded GPIOs and they cannot be used for high speed or precise timing signals like CS, D/C, Reset and Ready. Buttons, rotary encoder, amplifier control and power are supported. Depending on the actual chipset, pullup or pulldown might be supported so you might have to add external resistors (only MCP23x17 does pullup). The pca8575 is not a great chip, it generate a fair bit of spurious interrupts when used for GPIO out. When using a SPI expander, the bus must be configured using shared [SPI](#SPI) bus
+
+For the mpr121, only the capacitive touch capability is implemented to provide 12 separate touch sensitive inputs. The GPIO capablity of the chip is not implemented.
 
 ### LED 
 See [set_GPIO](#set-gpio) for how to set the green and red LEDs. In addition, their brightness can be controlled using the "led_brigthness" parameter. The syntax is
