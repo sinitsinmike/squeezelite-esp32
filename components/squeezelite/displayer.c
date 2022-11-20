@@ -859,7 +859,7 @@ static void grfa_handler(u8_t *data, int len) {
 		} else if (artwork.size) GDS_ClearWindow(display, artwork.x, artwork.y, -1, -1, GDS_COLOR_BLACK);
 		
 		artwork.full = artwork.enable && artwork.x == 0 && artwork.y == 0;
-		LOG_INFO("gfra en:%u x:%hu, y:%hu", artwork.enable, artwork.x, artwork.y);
+		LOG_DEBUG("gfra en:%u x:%hu, y:%hu", artwork.enable, artwork.x, artwork.y);
 		
 		// done in any case
 		return;
@@ -878,7 +878,7 @@ static void grfa_handler(u8_t *data, int len) {
 		artwork.y = htons(pkt->y);
 		artwork.full = artwork.enable && artwork.x == 0 && artwork.y == 0;
 		if (artwork.data) free(artwork.data);
-		artwork.data = malloc(length);
+		artwork.data = malloc(length);		
 	}	
 	
 	// copy artwork data
@@ -886,12 +886,14 @@ static void grfa_handler(u8_t *data, int len) {
 	artwork.size += size;
 	if (artwork.size == length) {
 		GDS_ClearWindow(display, artwork.x, artwork.y, -1, -1, GDS_COLOR_BLACK);
+		xSemaphoreTake(displayer.mutex, portMAX_DELAY);			
 		GDS_DrawJPEG(display, artwork.data, artwork.x, artwork.y, artwork.y < displayer.height ? (GDS_IMAGE_RIGHT | GDS_IMAGE_TOP) : GDS_IMAGE_CENTER);
+		xSemaphoreGive(displayer.mutex);		
 		free(artwork.data);
 		artwork.data = NULL;
 	} 
-	
-	LOG_INFO("gfra l:%u x:%hu, y:%hu, o:%u s:%u", length, artwork.x, artwork.y, offset, size);
+		
+	LOG_DEBUG("gfra l:%u x:%hu, y:%hu, o:%u s:%u", length, artwork.x, artwork.y, offset, size);
 }
 
 /****************************************************************************************
@@ -1368,7 +1370,7 @@ static void displayer_task(void *args) {
 		// need to make sure we own display
 		if (display && displayer.owned) GDS_Update(display);
 		else if (!led_display) displayer.wake = LONG_WAKE;
-		
+	
 		// release semaphore and sleep what's needed
 		xSemaphoreGive(displayer.mutex);
 		

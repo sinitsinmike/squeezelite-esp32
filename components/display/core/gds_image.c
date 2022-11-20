@@ -8,7 +8,11 @@
  
 #include <string.h>
 #include "math.h"
+#ifdef TJPGD_ROM
 #include "esp32/rom/tjpgd.h"
+#else
+#include "tjpgd.h"
+#endif
 #include "esp_log.h"
 
 #include "gds.h"
@@ -142,7 +146,7 @@ static unsigned OutHandlerDirect(JDEC *Decoder, void *Bitmap, JRECT *Frame) {
 	JpegCtx *Context = (JpegCtx*) Decoder->device;
     uint8_t *Pixels = (uint8_t*) Bitmap;
 	int Shift = 8 - Context->Depth;
-
+	
 	// decoded image is RGB888, shift only make sense for grayscale
 	if (Context->Mode == GDS_RGB888) {
 		OUTHANDLERDIRECT(Scaler888, 0);

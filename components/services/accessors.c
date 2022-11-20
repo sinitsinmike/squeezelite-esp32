@@ -392,7 +392,9 @@ const display_config_t * config_display_get(){
 		.hflip = false,
 		.type = NULL,
 		.speed = 0,
-		.rotate = false
+		.rotate = false,
+		.invert = false,
+		.colorswap = 0,
 	};
 	char *config = config_alloc_get(NVS_TYPE_STR, "display_config");
 	if (!config) {
@@ -420,6 +422,8 @@ const display_config_t * config_display_get(){
 	dstruct.hflip= strcasestr(config, "HFlip") ? true : false;
 	dstruct.vflip= strcasestr(config, "VFlip") ? true : false;
 	dstruct.rotate= strcasestr(config, "rotate") ? true : false;
+	dstruct.invert= strcasestr(config, "invert") ? true : false;
+	dstruct.colorswap= strcasestr(config, "cswap") ? 1 : 0;
 	return &dstruct;
 }
 

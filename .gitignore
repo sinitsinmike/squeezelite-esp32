@@ -98,5 +98,6 @@ test/.vscode/
 
 node_modules/*
 esp-dsp/
+*.bak
 
 

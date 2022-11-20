@@ -12,6 +12,8 @@ Squeezelite-esp32 is an audio software suite made to run on espressif's ESP32 wi
 
 Depending on the hardware connected to the ESP32, you can send audio to a local DAC, to SPDIF or to a Bluetooth speaker. The bare minimum required hardware is a WROVER module with 4MB of Flash and 4MB of PSRAM (https://www.espressif.com/en/products/modules/esp32). With that module standalone, just apply power and you can stream to a Bluetooth speaker. You can also send audio to most I2S DAC as well as to SPDIF receivers using just a cable or an optical transducer.
 
+Note that streaming **to** a Bluetooth speaker is not the main purpose and remains experimental, so your mileage will vary. We will not work on improving or fixing that feature, please don't open issues about that.
+
 But squeezelite-esp32 is highly extensible and you can add
 
 - [Buttons](#buttons) and [Rotary Encoder](#rotary-encoder) and map/combine them to various functions (play, pause, volume, next ...)
@@ -53,6 +55,8 @@ The esp32 must run at 240 MHz, with Quad-SPI I/O at 80 MHz and a clock of 40 Mhz
 In 16 bits mode, although 192 kHz is reported as max rate, it's highly recommended to limit reported sampling rate to 96k (-Z 96000). Note that some high-speed 24/96k on-line streams might stutter because of TCP/IP stack performances. It is usually due to the fact that the server sends small packets of data and the esp32 cannot receive encoded audio fast enough, regardless of task priority settings (I've tried to tweak that a fair bit). The best option in that case is to let LMS proxy the stream as it will provide larger chunks and a "smoother" stream that can then be handled.
 
 Note as well that some codecs consume more CPU than others or have not been optimized as much. I've done my best to tweak these, but that level of optimization includes writing some assembly which is painful. One very demanding codec is AAC when files are encoded with SBR. It allows reconstruction of upper part of spectrum and thus higher sampling rate, but the codec spec is such that this is optional, you can decode simply lower band and accept lower sampling rate - See the AAC_DISABLE_SBR option below.
+## Installation
+To get started, you'll need to perform an initial flash on one of the supported devices (see below) using a usb cable or a serial adapter, depending if your device came with one or if it didn't. The easiest way is to use the [esp-web-tool based installer](https://sle118.github.io/squeezelite-esp32-installer/), which is kept up to date with the latest builds we do. After you've completed this step, all subsequent updates will be done from our built-in web interface.
 
 ## Supported Hardware
 Any esp32-based hardware with at least 4MB of flash and 4MB of PSRAM will be capable of running squeezelite-esp32 and there are various boards that include such chip. A few are mentionned below, but any should work. You can find various help & instructions [here](https://forums.slimdevices.com/showthread.php?112697-ANNOUNCE-Squeezelite-ESP32-(dedicated-thread))
@@ -222,13 +226,14 @@ Ground -------------------------- coax signal ground
 The NVS parameter "display_config" sets the parameters for an optional display. It can be I2C (see [here](#i2c) for shared bus) or SPI (see [here](#spi) for shared bus) Syntax is
 ```
 I2C,width=<pixels>,height=<pixels>[address=<i2c_address>][,reset=<gpio>][,HFlip][,VFlip][driver=SSD1306|SSD1326[:1|4]|SSD1327|SH1106]
-SPI,width=<pixels>,height=<pixels>,cs=<gpio>[,back=<gpio>][,reset=<gpio>][,speed=<speed>][,HFlip][,VFlip][driver=SSD1306|SSD1322|SSD1326[:1|4]|SSD1327|SH1106|SSD1675|ST7735[:x=<offset>][:y=<offset>]|ST7789|ILI9341[:16|18][,rotate][,invert]
+SPI,width=<pixels>,height=<pixels>,cs=<gpio>[,back=<gpio>][,reset=<gpio>][,speed=<speed>][,HFlip][,VFlip][driver=SSD1306|SSD1322|SSD1326[:1|4]|SSD1327|SH1106|SSD1675|ST7735[:x=<offset>][:y=<offset>]|ST7789|ILI9341[:16|18][,rotate][,invert][,cswap]
 ```
 - back: a LED backlight used by some older devices (ST7735). It is PWM controlled for brightness
 - reset: some display have a reset pin that is should normally be pulled up if unused. Most displays require reset and will not initialize well otherwise.
 - VFlip and HFlip are optional can be used to change display orientation
 - rotate: for non-square *drivers*, move to portrait mode. Note that *width* and *height* must be inverted then
-- invert: pixel invertion (only for ST77xx devices)
+- invert: pixel invertion
+- cswap: some display require a GBR color ordering instead of RGB (ST77xx only)
 - Default speed is 8000000 (8MHz) but SPI can work up to 26MHz or even 40MHz
 - SH1106 is 128x64 monochrome I2C/SPI [here](https://www.waveshare.com/wiki/1.3inch_OLED_HAT)
 - SSD1306 is 128x32 monochrome I2C/SPI [here](https://www.buydisplay.com/i2c-blue-0-91-inch-oled-display-module-128x32-arduino-raspberry-pi)
