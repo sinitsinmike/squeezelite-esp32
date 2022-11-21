@@ -64,7 +64,6 @@ sub maxTreble {	20 }
 sub minTreble {	-13 }
 sub maxBass { 20 }
 sub minBass { -13 }
-
 sub hasLED { 
 	my $client = shift;
 	return $prefs->client($client)->get('led_config') || 0;

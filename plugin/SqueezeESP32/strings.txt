@@ -140,7 +140,10 @@ PLUGIN_SQUEEZEESP32_LED_DATA_X
 
 PLUGIN_SQUEEZEESP32_LED_DATA_CMD
 	EN	Command
-	
+
+PLUGIN_SQUEEZEESP32_WAVEFORM
+	EN	Waveform Visualizer
+
 PLUGIN_SQUEEZEESP32_EQUALIZER
 	DE	Grafischer Equalizer
 	EN	Graphic equalizer
@@ -148,6 +151,3 @@ PLUGIN_SQUEEZEESP32_EQUALIZER
 PLUGIN_SQUEEZEESP32_EQUALIZER_SAVE
 	DE	Bitte speichern Sie die Equalizer Einstellungen, falls das Gerät diese dauerhaft verwenden soll. Ansonsten werden sie beim nächsten Start zurückgesetzt.
 	EN	Don't forget to save the Equalizer settings if you want them to stick. Otherwise they'll be reset next time you restart the device.
-
-PLUGIN_SQUEEZEESP32_WAVEFORM
-	EN	Waveform Visualizer
