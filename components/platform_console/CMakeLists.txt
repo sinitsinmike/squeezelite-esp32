@@ -5,6 +5,7 @@ idf_component_register( SRCS
 							cmd_system.c
 							cmd_wifi.c
 							platform_console.c
+							improv_console.c
 							cmd_config.c
 						INCLUDE_DIRS .   
 						REQUIRES nvs_flash 

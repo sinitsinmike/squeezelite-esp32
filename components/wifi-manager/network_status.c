@@ -14,6 +14,7 @@
 #include "platform_esp32.h"
 #include "tools.h"
 #include "trace.h"
+#include "messaging.h"
 #ifndef CONFIG_SQUEEZELITE_ESP32_RELEASE_URL
 #pragma message "Defaulting release url"
 #define CONFIG_SQUEEZELITE_ESP32_RELEASE_URL "https://github.com/sle118/squeezelite-esp32/releases"
@@ -33,7 +34,11 @@ static uint16_t lms_server_cport = 0;
 static void (*chained_notify)(in_addr_t, u16_t, u16_t);
 static void connect_notify(in_addr_t ip, u16_t hport, u16_t cport);
 #define STA_IP_LEN sizeof(char) * IP4ADDR_STRLEN_MAX
-
+static update_reason_code_t last_reason_code = -1;
+void * get_http_server(int *port);
+update_reason_code_t get_last_reason_code(){
+    return last_reason_code;
+}
 void init_network_status() {
     chained_notify = server_notify;
     server_notify = connect_notify;
@@ -169,6 +174,11 @@ void network_status_safe_reset_sta_ip_string() {
 char* network_status_get_sta_ip_string() {
     return network_status_ip_address;
 }
+char * network_status_alloc_get_system_url(){
+    int port=0;
+    void * server = get_http_server(&port);
+    return messaging_alloc_format_string("http://%s:%d/",network_status_ip_address,port);
+}
 void set_lms_server_details(in_addr_t ip, u16_t hport, u16_t cport) {
     strncpy(lms_server_ip, inet_ntoa(ip), sizeof(lms_server_ip));
     lms_server_ip[sizeof(lms_server_ip) - 1] = '\0';
@@ -297,11 +307,13 @@ void network_status_update_address(cJSON* root, esp_netif_ip_info_t* ip_info) {
         ESP_LOGE(TAG, "Cannor update IP address. JSON structure or ip_info is null");
         return;
     }
+    network_status_safe_update_sta_ip_string(&ip_info->ip);
     network_update_cjson_string(&root, "ip", ip4addr_ntoa((ip4_addr_t*)&ip_info->ip));
     network_update_cjson_string(&root, "netmask", ip4addr_ntoa((ip4_addr_t*)&ip_info->netmask));
     network_update_cjson_string(&root, "gw", ip4addr_ntoa((ip4_addr_t*)&ip_info->gw));
 }
 void network_status_update_ip_info(update_reason_code_t update_reason_code) {
+    last_reason_code = update_reason_code;
     ESP_LOGV(TAG, "network_status_update_ip_info called");
     esp_netif_ip_info_t ip_info;
     if (network_status_lock_json_buffer(portMAX_DELAY)) {

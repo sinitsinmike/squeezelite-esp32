@@ -739,6 +739,7 @@ static void network_wifi_event_handler(void* arg, esp_event_base_t event_base, i
             wifi_event_sta_connected_t* s = (wifi_event_sta_connected_t*)event_data;
             char* bssid = network_manager_alloc_get_mac_string(s->bssid);
             char* ssid = strdup_psram((char*)s->ssid);
+            network_wifi_set_connect_state(NETWORK_WIFI_STATE_CONNECTED);
             if (bssid && ssid) {
                 ESP_LOGD(TAG, "WIFI_EVENT_STA_CONNECTED. Channel: %d, Access point: %s, BSSID: %s ", s->channel, STR_OR_BLANK(ssid), (bssid));
             }
@@ -773,6 +774,7 @@ static void network_wifi_event_handler(void* arg, esp_event_base_t event_base, i
                 ESP_LOGI(TAG, "WiFi Roaming to new access point");
             } else {
                 network_async_lost_connection((wifi_event_sta_disconnected_t*)event_data);
+                network_wifi_set_connect_state(NETWORK_WIFI_STATE_FAILED);
             }
         } break;
 
@@ -841,8 +843,10 @@ void network_wifi_generate_access_points_json(cJSON** ap_list) {
     known_access_point_t* it;
     if (*ap_list == NULL)
         return;
+    improv_wifi_list_allocate(ap_num);
     for (int i = 0; i < ap_num; i++) {
         network_wifi_add_access_point_json(*ap_list, &accessp_records[i]);
+        improv_wifi_list_add(ap_ssid_string(&accessp_records[i]),accessp_records[i].rssi, accessp_records[i].authmode!=WIFI_AUTH_OPEN);
     }
     SLIST_FOREACH(it, &s_ap_list, next) {
         if (!network_wifi_was_ssid_seen(it->ssid)) {
@@ -1126,10 +1130,12 @@ esp_err_t network_wifi_connect(const char* ssid, const char* password) {
     ESP_LOGD(TAG, "network_wifi_connect");
     if (!is_wifi_up()) {
         messaging_post_message(MESSAGING_WARNING, MESSAGING_CLASS_SYSTEM, "Wifi not started. Cannot connect");
+        network_wifi_set_connect_state(NETWORK_WIFI_STATE_DOWN);
         return ESP_FAIL;
     }
     if (!ssid || !password || strlen(ssid) == 0) {
         ESP_LOGE(TAG, "Cannot connect wifi. wifi config is null!");
+        network_wifi_set_connect_state(NETWORK_WIFI_STATE_INVALID_CONFIG);
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -1159,12 +1165,17 @@ esp_err_t network_wifi_connect(const char* ssid, const char* password) {
 
     config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
     if ((err = esp_wifi_set_config(WIFI_IF_STA, &config)) != ESP_OK) {
+        network_wifi_set_connect_state(NETWORK_WIFI_STATE_FAILED);
         ESP_LOGE(TAG, "Failed to set STA configuration. Error %s", esp_err_to_name(err));
     }
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "Wifi Connecting to %s...", ssid);
         if ((err = esp_wifi_connect()) != ESP_OK) {
             ESP_LOGE(TAG, "Failed to initiate wifi connection. Error %s", esp_err_to_name(err));
+            network_wifi_set_connect_state(NETWORK_WIFI_STATE_FAILED);
+        }
+        else{
+            network_wifi_set_connect_state(NETWORK_WIFI_STATE_CONNECTING);
         }
     }
     return err;

@@ -18,3 +18,13 @@ components/wifi-manager/UML-State-Machine-in-C
 envfile.txt
 artifacts
 web-installer
+
+squeezelite-esp32.code-workspace
+
+esp-idf-vscode-generated.gdb
+
+debug.log
+
+components/wifi-manager/esp32_improv.cpp.txt
+
+components/wifi-manager/esp32_improv.h.txt

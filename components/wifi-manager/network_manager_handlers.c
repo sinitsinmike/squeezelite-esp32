@@ -1,7 +1,10 @@
 #ifdef NETWORK_HANDLERS_LOG_LEVEL
 #define LOG_LOCAL_LEVEL NETWORK_HANDLERS_LOG_LEVEL
+    #pragma message("Log Level overwritten to " LOG_LOCAL_LEVEL)
+#else
+    #pragma message("Log Level set to " LOG_LOCAL_LEVEL)
 #endif
-#include "network_manager.h"
+#include "network_manager.h" 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,6 +45,7 @@
 #include "tools.h"
 #include "http_server_handlers.h"
 #include "network_manager.h"
+#include "improv.h"
 
 static const char TAG[]="network_handlers";
 
@@ -387,6 +391,7 @@ static state_machine_result_t NETWORK_ETH_ACTIVE_STATE_handler(state_machine_t* 
         case EN_SCAN:
             ESP_LOGW(TAG,"Wifi  scan cannot be executed in this state");
             network_wifi_built_known_ap_list();
+            
             result = EVENT_HANDLED;
             break;
         case EN_DELETE: {
@@ -418,7 +423,9 @@ static state_machine_result_t ETH_CONNECTING_NEW_STATE_entry_handler(state_machi
     network_t* const nm = (network_t *)State_Machine;
     network_handler_entry_print(State_Machine,true);
     network_start_stop_dhcp_client(nm->wifi_netif, true);
-    network_wifi_connect(nm->event_parameters->ssid,nm->event_parameters->password);
+    if(network_wifi_connect(nm->event_parameters->ssid,nm->event_parameters->password) == ESP_ERR_INVALID_ARG){
+        network_async_fail();
+    }
     FREE_AND_NULL(nm->event_parameters->ssid);
     FREE_AND_NULL(nm->event_parameters->password);
     NETWORK_EXECUTE_CB(State_Machine);
@@ -430,6 +437,11 @@ static state_machine_result_t ETH_CONNECTING_NEW_STATE_handler(state_machine_t* 
     network_handler_print(State_Machine,true);
     state_machine_result_t result = EVENT_HANDLED;
     switch (State_Machine->Event) {
+        case EN_FAIL:
+            ESP_LOGW(TAG,"Error connecting to access point");
+            network_status_update_ip_info(UPDATE_FAILED_ATTEMPT);
+            result = local_traverse_state(State_Machine, &Wifi_Configuring_State[WIFI_CONFIGURING_STATE],__FUNCTION__);
+            break;
         case EN_GOT_IP:
             result= local_traverse_state(State_Machine, &network_states[WIFI_CONNECTED_STATE],__FUNCTION__);
             break;
@@ -621,6 +633,7 @@ static state_machine_result_t NETWORK_WIFI_CONFIGURING_ACTIVE_STATE_entry_handle
     nm->wifi_ap_netif = network_wifi_config_ap();
     dns_server_start(nm->wifi_ap_netif);
     network_wifi_start_scan();
+    NETWORK_EXECUTE_CB(State_Machine);
     network_handler_entry_print(State_Machine,false);
     return EVENT_HANDLED;
 }
@@ -648,6 +661,9 @@ static state_machine_result_t NETWORK_WIFI_CONFIGURING_ACTIVE_STATE_handler(stat
             break;
         case EN_ETH_GOT_IP:
             network_interface_coexistence(State_Machine);
+            break;
+        case EN_TIMER:
+            result= EVENT_HANDLED;
             break;
         default:
             result =EVENT_UN_HANDLED;
@@ -696,7 +712,9 @@ static state_machine_result_t WIFI_CONFIGURING_CONNECT_STATE_entry_handler(state
     network_t* const nm = (network_t *)State_Machine;
     network_handler_entry_print(State_Machine,true);
     network_start_stop_dhcp_client(nm->wifi_netif, true);
-    network_wifi_connect(nm->event_parameters->ssid,nm->event_parameters->password);
+    if(network_wifi_connect(nm->event_parameters->ssid,nm->event_parameters->password) == ESP_ERR_INVALID_ARG){
+        network_async_fail();
+    }
     FREE_AND_NULL(nm->event_parameters->ssid);
     FREE_AND_NULL(nm->event_parameters->password);
     NETWORK_EXECUTE_CB(State_Machine);
@@ -718,13 +736,16 @@ static state_machine_result_t WIFI_CONFIGURING_CONNECT_STATE_handler(state_machi
             network_status_update_ip_info(UPDATE_CONNECTION_OK); 
             result= local_traverse_state(State_Machine, &Wifi_Configuring_State[WIFI_CONFIGURING_CONNECT_SUCCESS_STATE],__FUNCTION__);
             break;
+        case EN_FAIL:
+            ESP_LOGW(TAG,"Error connecting to access point");
+            result = local_traverse_state(State_Machine, &Wifi_Configuring_State[WIFI_CONFIGURING_CONNECT_FAILED_STATE],__FUNCTION__);
+            break;
         case EN_LOST_CONNECTION:
             if(nm->event_parameters->disconnected_event->reason == WIFI_REASON_ASSOC_LEAVE) {
                 ESP_LOGI(TAG,"Wifi was disconnected from previous access point. Waiting to connect.");
             }
             else {
-                network_status_update_ip_info(UPDATE_FAILED_ATTEMPT);
-                result = local_traverse_state(State_Machine, &Wifi_Configuring_State[WIFI_CONFIGURING_STATE],__FUNCTION__);
+                result = local_traverse_state(State_Machine, &Wifi_Configuring_State[WIFI_CONFIGURING_CONNECT_FAILED_STATE],__FUNCTION__);
             }
             break;
         case EN_TIMER:
@@ -746,6 +767,43 @@ static state_machine_result_t WIFI_CONFIGURING_CONNECT_STATE_exit_handler(state_
     network_exit_handler_print(State_Machine,false);
     return EVENT_HANDLED;
 }
+
+/********************************************************************************************* 
+ * WIFI_CONFIGURING_CONNECT_FAILED_STATE
+ */
+static state_machine_result_t WIFI_CONFIGURING_CONNECT_FAILED_STATE_entry_handler(state_machine_t* const State_Machine) {
+    network_handler_entry_print(State_Machine,true);
+    network_status_update_ip_info(UPDATE_FAILED_ATTEMPT);
+    ESP_LOGE(TAG, "Connecting Failed.");
+    NETWORK_EXECUTE_CB(State_Machine);
+    network_async_fail();
+    network_handler_entry_print(State_Machine,false);
+    return EVENT_HANDLED;
+}
+static state_machine_result_t WIFI_CONFIGURING_CONNECT_FAILED_STATE_handler(state_machine_t* const State_Machine) {
+    network_handler_print(State_Machine,true);
+    state_machine_result_t result = EVENT_HANDLED;
+    network_t* const nm = (network_t *)State_Machine;
+    switch (State_Machine->Event) {
+         case EN_FAIL:
+            result = local_traverse_state(State_Machine, &Wifi_Configuring_State[WIFI_CONFIGURING_STATE],__FUNCTION__);
+            break;
+        default:
+            result= EVENT_HANDLED;
+    }
+    // Process global handler at the end, since we want to overwrite
+    // UPDATE_STATUS with our own logic above
+    HANDLE_GLOBAL_EVENT(State_Machine);
+    network_handler_print(State_Machine,false);
+    return result;
+}
+static state_machine_result_t WIFI_CONFIGURING_CONNECT_FAILED_STATE_exit_handler(state_machine_t* const State_Machine) {
+    network_exit_handler_print(State_Machine,true);
+    network_set_timer(0,NULL);
+    network_exit_handler_print(State_Machine,false);
+    return EVENT_HANDLED;
+}
+
 
 /********************************************************************************************* 
  * WIFI_CONFIGURING_CONNECT_SUCCESS_STATE
@@ -827,6 +885,7 @@ static state_machine_result_t WIFI_CONNECTING_STATE_handler(state_machine_t* con
             }
             else if(nm->event_parameters->disconnected_event->reason != WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT) {
                 network_status_update_ip_info(UPDATE_FAILED_ATTEMPT);
+                network_wifi_set_connect_state(NETWORK_WIFI_STATE_FAILED);
                 result = local_traverse_state(State_Machine, &Wifi_Configuring_State[WIFI_CONFIGURING_STATE],__FUNCTION__);
             }
             break;
@@ -838,6 +897,7 @@ static state_machine_result_t WIFI_CONNECTING_STATE_handler(state_machine_t* con
 }
 static state_machine_result_t WIFI_CONNECTING_STATE_exit_handler(state_machine_t* const State_Machine) {
     network_exit_handler_print(State_Machine,true);
+    network_set_timer(0,NULL);
     network_exit_handler_print(State_Machine,false);
     return EVENT_HANDLED;
 }
@@ -849,7 +909,9 @@ static state_machine_result_t WIFI_CONNECTING_NEW_STATE_entry_handler(state_mach
     network_t* const nm = (network_t *)State_Machine;
     network_handler_entry_print(State_Machine,true);
     network_start_stop_dhcp_client(nm->wifi_netif, true);
-    network_wifi_connect(nm->event_parameters->ssid,nm->event_parameters->password);
+    if(network_wifi_connect(nm->event_parameters->ssid,nm->event_parameters->password) == ESP_ERR_INVALID_ARG){
+        network_async_fail();
+    }
     FREE_AND_NULL(nm->event_parameters->ssid);
     FREE_AND_NULL(nm->event_parameters->password);
     NETWORK_EXECUTE_CB(State_Machine);
@@ -859,8 +921,13 @@ static state_machine_result_t WIFI_CONNECTING_NEW_STATE_entry_handler(state_mach
 static state_machine_result_t WIFI_CONNECTING_NEW_STATE_handler(state_machine_t* const State_Machine) {
     HANDLE_GLOBAL_EVENT(State_Machine);
     network_handler_print(State_Machine,true);
+    network_t* const nm = (network_t *)State_Machine;
     state_machine_result_t result = EVENT_HANDLED;
     switch (State_Machine->Event) {
+        case EN_FAIL:
+            ESP_LOGW(TAG,"Error connecting to access point");
+            result = local_traverse_state(State_Machine, &Wifi_Configuring_State[WIFI_CONNECTING_NEW_FAILED_STATE],__FUNCTION__);
+            break;
         case EN_GOT_IP:
             network_status_update_ip_info(UPDATE_CONNECTION_OK); 
             result= local_traverse_state(State_Machine, &Wifi_Active_State[WIFI_CONNECTED_STATE],__FUNCTION__);
@@ -901,6 +968,7 @@ static state_machine_result_t WIFI_CONNECTING_NEW_STATE_exit_handler(state_machi
 static state_machine_result_t WIFI_CONNECTING_NEW_FAILED_STATE_entry_handler(state_machine_t* const State_Machine) {
     network_t* const nm = (network_t *)State_Machine;
     network_handler_entry_print(State_Machine,true);
+    network_wifi_set_connect_state(NETWORK_WIFI_STATE_FAILED);
     if (nm->wifi_connected ) {
         // Wifi was already connected to an existing access point. Restore connection
         network_connect_active_ssid(State_Machine);      
@@ -1140,18 +1208,18 @@ static state_machine_result_t ETH_ACTIVE_CONNECTED_STATE_exit_handler(state_mach
 static state_machine_result_t local_switch_state(state_machine_t* state_machine,
                                                  const state_t* const target_state, const char * caller) {
     const state_t* source = state_machine->State;
-    NETWORK_PRINT_TRANSITION(true, "BEGIN SWITCH", ((network_t *)state_machine)->source_state, target_state, state_machine->Event, true,caller);
+    NETWORK_PRINT_TRANSITION(true, "switch.begin", ((network_t *)state_machine)->source_state, target_state, state_machine->Event, true,caller);
     state_machine_result_t result = switch_state(state_machine, target_state);
-    NETWORK_PRINT_TRANSITION( false,"BEGIN SWITCH", ((network_t *)state_machine)->source_state, target_state, state_machine->Event, true,caller);
+    NETWORK_PRINT_TRANSITION( false,"switch.end", ((network_t *)state_machine)->source_state, target_state, state_machine->Event, true,caller);
     ((network_t *)state_machine)->source_state = source;
     return result;
 }
 static state_machine_result_t local_traverse_state(state_machine_t* const state_machine,
                                                    const state_t* const target_state, const char * caller) {
     const state_t *  source = state_machine->State;
-    NETWORK_PRINT_TRANSITION( true,"BEGIN TRAVERSE", ((network_t *)state_machine)->source_state, target_state, state_machine->Event, true, caller);
+    NETWORK_PRINT_TRANSITION( true,"traverse.begin", ((network_t *)state_machine)->source_state, target_state, state_machine->Event, true, caller);
     state_machine_result_t result = traverse_state(state_machine, target_state);
-    NETWORK_PRINT_TRANSITION( false,"END TRAVERSE", ((network_t *)state_machine)->source_state, target_state, state_machine->Event, true,caller);
+    NETWORK_PRINT_TRANSITION( false,"traverse.end", ((network_t *)state_machine)->source_state, target_state, state_machine->Event, true,caller);
     ((network_t *)state_machine)->source_state = source;
     return result;
 }
