@@ -1,3 +1,4 @@
+extern TickType_t improv_timeout_tick;
 #pragma once
 #include "network_manager.h"
 #include "improv.h"
