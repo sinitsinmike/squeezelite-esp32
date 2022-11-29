@@ -54,6 +54,8 @@ cJSON* network_status_get_basic_info(cJSON** old);
 void network_status_update_basic_info();
 void network_status_clear_ip();
 void network_status_safe_reset_sta_ip_string();
+update_reason_code_t get_last_reason_code();
+char * network_status_alloc_get_system_url();
 #ifdef __cplusplus
 }
 #endif

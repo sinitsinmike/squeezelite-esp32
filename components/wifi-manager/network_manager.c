@@ -62,12 +62,10 @@ typedef struct network_callback {
     SLIST_ENTRY(network_callback)
     next;  //!< next callback
 } network_callback_t;
-
+static wifi_connect_state_t wifi_connect_state = NETWORK_WIFI_STATE_INIT;
 /** linked list of command structures */
 static SLIST_HEAD(cb_list, network_callback) s_cb_list;
-
 network_t NM;
-
 
 //! Create and initialize the array of state machines.
 state_machine_t* const SM[] = {(state_machine_t*)&NM};
@@ -75,7 +73,12 @@ static void network_timer_cb(void* timer_id);
 int get_root_id(const state_t *  state);
 const state_t* get_root( const state_t* const state);
 static void network_task(void* pvParameters);
-
+void network_wifi_set_connect_state(wifi_connect_state_t state){
+    wifi_connect_state = state;
+}
+wifi_connect_state_t network_wifi_get_connect_state(){
+    return wifi_connect_state;
+}
 void network_start_stop_dhcp_client(esp_netif_t* netif, bool start) {
     tcpip_adapter_dhcp_status_t status;
     esp_err_t err = ESP_OK;
@@ -195,16 +198,20 @@ void network_start_stop_dhcps(esp_netif_t* netif, bool start) {
 #define ADD_LEAF(name,...) CASE_TO_STR(name);
 #define ADD_EVENT(name) CASE_TO_STR(name);
 #define ADD_FIRST_EVENT(name) CASE_TO_STR(name);
-static const char* state_to_string(const  state_t * state) {
-    if(!state) {
-        return "";
-    }
-    switch (state->Parent?state->Parent->Id:state->Id) {
+static const char* nm_state_to_string(nm_state_t  state) {
+    switch (state) {
         ALL_NM_STATE
         default:
             break;
     }
     return "Unknown";
+}
+static const char* state_to_string(const  state_t * state) {
+    if(!state) {
+        return "";
+    }
+    return nm_state_to_string(state->Parent?state->Parent->Id:state->Id);
+   
 }
 static const char* wifi_state_to_string(mn_wifi_active_state_t state) {
     switch (state) {
@@ -230,24 +237,26 @@ static const char* wifi_configuring_state_to_string(mn_wifi_configuring_state_t 
     }
     return "Unknown";
 }
-static const char* sub_state_to_string(const state_t * state) {
-    if(!state) {
-        return "N/A";
-    }
-    int root_id = get_root_id(state);
-    switch (root_id)
+static const char* sub_state_id_to_string(nm_state_t state, int substate) {
+    switch (state)
     {
     case NETWORK_ETH_ACTIVE_STATE:
-        return eth_state_to_string(state->Id);
+        return eth_state_to_string(substate);
         break;
     case NETWORK_WIFI_ACTIVE_STATE:
-        return wifi_state_to_string(state->Id);
+        return wifi_state_to_string(substate);
     case NETWORK_WIFI_CONFIGURING_ACTIVE_STATE:
-        return wifi_configuring_state_to_string(state->Id);
+        return wifi_configuring_state_to_string(substate);
     default:
         break;
     }
     return "*";
+}
+static const char* sub_state_to_string(const state_t * state) {
+    if(!state) {
+        return "N/A";
+    }
+    return sub_state_id_to_string(get_root_id(state), state->Id);
 }
 
 static const char* event_to_string(network_event_t state) {
@@ -274,8 +283,7 @@ static const max_sub_states_t state_max[] = {
 { .parent_state = NETWORK_INSTANTIATED_STATE, .sub_state_last = 0 },
 {.parent_state = NETWORK_ETH_ACTIVE_STATE, .sub_state_last = TOTAL_ETH_ACTIVE_STATE-1 },
 {.parent_state = NETWORK_WIFI_ACTIVE_STATE, .sub_state_last = TOTAL_WIFI_ACTIVE_STATE-1 },
-{.parent_state = WIFI_CONFIGURING_STATE, .sub_state_last = TOTAL_WIFI_CONFIGURING_STATE-1 },
-{.parent_state = WIFI_CONFIGURING_STATE, .sub_state_last = TOTAL_WIFI_CONFIGURING_STATE-1 },
+{.parent_state = NETWORK_WIFI_CONFIGURING_ACTIVE_STATE, .sub_state_last = TOTAL_WIFI_CONFIGURING_STATE-1 },
 {.parent_state =-1}
 };
 
@@ -345,23 +353,27 @@ static void network_task(void* pvParameters) {
      return -1;
  }
 esp_err_t network_register_state_callback(nm_state_t state,int sub_state, const char* from, network_status_reached_cb cb) {
+    const char * error_prefix = "Error registering callback for State" ;
     network_callback_t* item = NULL;
     if (!cb) {
         return ESP_ERR_INVALID_ARG;
     }
     item = calloc(1, sizeof(*item));
     if (item == NULL) {
+        ESP_LOGE(TAG,"%s %s. Memory allocation failed",error_prefix, nm_state_to_string(state));
         return ESP_ERR_NO_MEM;
     }
     if(sub_state != -1 && sub_state>get_max_substate(state)){
         // sub state has to be valid
+        ESP_LOGE(TAG,"%s %s. Substate %d/%d %s",error_prefix, nm_state_to_string(state), sub_state,get_max_substate(state), sub_state>get_max_substate(state)?"out of boundaries":"invalid");
         return ESP_ERR_INVALID_ARG;
     }
-
+    ESP_LOGI(TAG,"Registering callback for State %s, substate %s: %s", nm_state_to_string(state), sub_state_id_to_string(state,sub_state), from);
     item->state = state;
     item->cb = cb;
     item->from = from;
     item->sub_state=sub_state;
+    
     network_callback_t* last = SLIST_FIRST(&s_cb_list);
     if (last == NULL) {
         SLIST_INSERT_HEAD(&s_cb_list, item, next);
@@ -389,18 +401,25 @@ static bool is_root_state(const state_t *  state){
 static bool is_current_state(const state_t*  state, nm_state_t  state_id, int sub_state_id){
     return get_root(state)->Id == state_id && (sub_state_id==-1 || (!is_root_state(state) && state->Id == sub_state_id) );
 }
+
 void network_execute_cb(state_machine_t* const state_machine, const char * caller) {
     network_callback_t* it;
+    bool found=false;
+    ESP_LOGI(TAG,"Checking if we need to invoke callbacks. ");
     SLIST_FOREACH(it, &s_cb_list, next) {
         if (is_current_state(state_machine->State,it->state, it->sub_state)) {
             char * cb_prefix= messaging_alloc_format_string("BEGIN Executing Callback %s", it->from) ;
             NETWORK_DEBUG_STATE_MACHINE(true,STR_OR_BLANK(cb_prefix),state_machine,false, STR_OR_BLANK(caller));    
             FREE_AND_NULL(cb_prefix);
             it->cb((nm_state_t)get_root(state_machine->State)->Id, is_root_state(state_machine->State)?-1:state_machine->State->Id);
+            found = true;
             cb_prefix= messaging_alloc_format_string("END Executing Callback %s", it->from) ;
             NETWORK_DEBUG_STATE_MACHINE(false,STR_OR_BLANK(cb_prefix),state_machine,false, STR_OR_BLANK(caller));    
             FREE_AND_NULL(cb_prefix);
         }
+    }
+    if(!found){
+        NETWORK_DEBUG_STATE_MACHINE(true,"No Callback found ",state_machine,false, STR_OR_BLANK(caller));    
     }
 }
 
@@ -465,7 +484,7 @@ void network_manager_format_from_to_states(esp_log_level_t level, const char* pr
         source_sub_state = sub_state_to_string(from_state);
     }
     if (show_source) {
-        ESP_LOG_LEVEL(level, TAG, "%s %s %s(%s)->%s(%s) [%s]",
+        ESP_LOG_LEVEL(level, TAG, "%s %s %s.%s->%s.%s [evt:%s]",
                       STR_OR_BLANK(caller),
                       prefix,
                       source_state,
@@ -724,19 +743,23 @@ void network_ip_event_handler(void* arg, esp_event_base_t event_base, int32_t ev
             break;
     }
 }
-void network_set_hostname(esp_netif_t* interface) {
-    esp_err_t err;
+char * alloc_get_host_name(){
     ESP_LOGD(TAG, "Retrieving host name from nvs");
     char* host_name = (char*)config_alloc_get(NVS_TYPE_STR, "host_name");
     if (host_name == NULL) {
         ESP_LOGE(TAG, "Could not retrieve host name from nvs");
-    } else {
-        ESP_LOGD(TAG, "Setting host name to : %s", host_name);
-        if ((err = esp_netif_set_hostname(interface, host_name)) != ESP_OK) {
-            ESP_LOGE(TAG, "Unable to set host name. Error: %s", esp_err_to_name(err));
-        }
-        free(host_name);
+    } 
+    return host_name;
+}
+void network_set_hostname(esp_netif_t* interface) {
+    esp_err_t err;
+    char * host_name = alloc_get_host_name();
+    if(!host_name) return;
+    ESP_LOGD(TAG, "Setting host name to : %s", host_name);
+    if ((err = esp_netif_set_hostname(interface, host_name)) != ESP_OK) {
+        ESP_LOGE(TAG, "Unable to set host name. Error: %s", esp_err_to_name(err));
     }
+    free(host_name);
 }
 #define LOCAL_MAC_SIZE 20
 char* network_manager_alloc_get_mac_string(uint8_t mac[6]) {

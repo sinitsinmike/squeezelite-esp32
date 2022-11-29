@@ -130,7 +130,6 @@ void register_regular_handlers(httpd_handle_t server){
 
 }
 
-
 esp_err_t http_server_start()
 {
 	

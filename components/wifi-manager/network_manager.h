@@ -10,6 +10,7 @@
 #include "hsm.h"
 #include "esp_log.h"
 #include "network_services.h"
+#include "improv.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -257,10 +258,20 @@ typedef enum update_reason_code_t {
 	UPDATE_LOST_CONNECTION = 3,
 	UPDATE_FAILED_ATTEMPT_AND_RESTORE = 4,
 	UPDATE_ETHERNET_CONNECTED = 5
-
 }update_reason_code_t;
 
+typedef enum {
+    NETWORK_WIFI_STATE_INIT,
+    NETWORK_WIFI_STATE_CONNECTING,
+    NETWORK_WIFI_STATE_DOWN,
+    NETWORK_WIFI_STATE_INVALID_CONFIG,
+    NETWORK_WIFI_STATE_FAILED,
+    NETWORK_WIFI_STATE_CONNECTED
 
+} wifi_connect_state_t;
+
+void network_wifi_set_connect_state(wifi_connect_state_t state);
+wifi_connect_state_t network_wifi_get_connect_state();
 
 
 
@@ -312,6 +323,7 @@ void network_manager_initialise_mdns();
 bool network_is_wifi_prioritized();
 void network_set_timer(uint16_t duration, const char * tag);
 void network_set_hostname(esp_netif_t * netif);
+char * alloc_get_host_name();
 esp_err_t network_get_ip_info_for_netif(esp_netif_t* netif, tcpip_adapter_ip_info_t* ipInfo);
 void network_start_stop_dhcp_client(esp_netif_t* netif, bool start);
 void network_start_stop_dhcps(esp_netif_t* netif, bool start);

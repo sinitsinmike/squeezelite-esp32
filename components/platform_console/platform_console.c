@@ -27,17 +27,18 @@
 #include "platform_config.h"
 #include "telnet.h" 
 #include "tools.h"
-
+#include "improv.h"
 #include "messaging.h"
-
+#include "network_manager.h"
 #include "config.h"
+#include "improv_console.h"
 static pthread_t thread_console;
 static void * console_thread();
 void console_start();
 static const char * TAG = "console";
 extern bool bypass_network_manager;
 extern void register_squeezelite();
-
+bool improv=false;
 static EXT_RAM_ATTR QueueHandle_t uart_queue;
 static EXT_RAM_ATTR struct {
 		uint8_t _buf[512];
@@ -249,30 +250,76 @@ void process_autoexec(){
 	}
 }
 
+
+#define BUFFERDEBUG 0
 static ssize_t stdin_read(int fd, void* data, size_t size) {
 	size_t bytes = -1;
+	uint32_t improv_next_timeout = 0;
+	if(!improv_buffer_data){
+		improv_buffer_data = (uint8_t * )malloc_init_external(improv_buffer_size);
+		memset(improv_buffer_data,0x00,improv_buffer_size);
+		improv_set_send_callback(improv_send_callback);
+	}
+	size_t read_size = 0;
 	
 	while (1) {
-		QueueSetMemberHandle_t activated = xQueueSelectFromSet(stdin_redir.queue_set, portMAX_DELAY);
-	
-		if (activated == uart_queue) {
-			uart_event_t event;
-			
-			xQueueReceive(uart_queue, &event, 0);
-	
-			if (event.type == UART_DATA) {
-				bytes = uart_read_bytes(CONFIG_ESP_CONSOLE_UART_NUM, data, size < event.size ? size : event.size, 0);
-				// we have to do our own line ending translation here 
-				for (int i = 0; i < bytes; i++) if (((char*)data)[i] == '\r') ((char*)data)[i] = '\n';
-				break;
-			}	
-		} else if (xRingbufferCanRead(stdin_redir.handle, activated)) {
+		QueueSetMemberHandle_t activated = xQueueSelectFromSet(stdin_redir.queue_set, improv_delay);
+		uint32_t now = esp_timer_get_time() / 1000;			uart_event_t event;
+		xQueueReceive(uart_queue, &event, 0);
+		//esp_rom_printf(".");
+		//esp_rom_printf("\n********Activated: 0x%6X, type: %d\n",(unsigned int)activated, event.type);
+
+		if (event.type == UART_DATA) {
+			//esp_rom_printf("uart.");
+			#if BUFFERDEBUG
+			printf("\n********event: %d, read: %d\n", event.size,bytes);
+			#endif
+			bytes = uart_read_bytes(CONFIG_ESP_CONSOLE_UART_NUM, improv_buffer_data+improv_buffer_len,1, 0);
+			while(bytes>0){
+				//esp_rom_printf("rb[%c]\n",*(bufferdata+buffer_len));
+				improv_buffer_len++;
+				if(!improv_parse_serial_byte(improv_buffer_len-1,improv_buffer_data[improv_buffer_len-1],improv_buffer_data,on_improv_command,on_improv_error)){
+					#if BUFFERDEBUG
+					//dump_buffer("improv invalid",(const char *)bufferdata,buffer_len);
+					#endif
+					if(improv_buffer_len>0){
+						//esp_rom_printf("not improv\n");
+						xRingbufferSend(stdin_redir.handle, improv_buffer_data,improv_buffer_len, pdMS_TO_TICKS(100));
+					}
+					improv_buffer_len=0;
+				}
+				bytes = uart_read_bytes(CONFIG_ESP_CONSOLE_UART_NUM, improv_buffer_data+improv_buffer_len,1, 0);
+			}
+			improv_next_timeout = esp_timer_get_time() / 1000+improv_timeout_ms;
+			#if BUFFERDEBUG
+			//dump_buffer("after event",(const char *)bufferdata,buffer_len);
+			#endif
+		} 
+		if ( xRingbufferCanRead(stdin_redir.handle, activated)) {
+			//esp_rom_printf("\n********rbr!\n");
 			char *p = xRingbufferReceiveUpTo(stdin_redir.handle, &bytes, 0, size);
 			// we might receive strings, replace null by \n
+			#if BUFFERDEBUG
+			//dump_buffer("Ringbuf read",p,bytes);
+			#endif
 			for (int i = 0; i < bytes; i++) if (p[i] == '\0' || p[i] == '\r') p[i] = '\n';						
 			memcpy(data, p, bytes);
 			vRingbufferReturnItem(stdin_redir.handle, p);
 			break;
+		}
+		if(improv_buffer_len>0){
+			improv_delay = improv_timeout_tick;
+		}
+		else {
+			improv_delay = portMAX_DELAY;
+		}
+		if (now > improv_next_timeout && improv_buffer_len > 0) {
+			#if BUFFERDEBUG
+			//dump_buffer("improv timeout",(const char *)bufferdata,buffer_len);
+			#endif
+			//esp_rom_printf("\n********QueueSent\n");
+			xRingbufferSendFromISR(stdin_redir.handle, improv_buffer_data, improv_buffer_len, pdMS_TO_TICKS(100));
+			improv_buffer_len = 0;
 		}
 	}	
 	
@@ -304,6 +351,9 @@ void initialize_console() {
 		
 	/* re-direct stdin to our own driver so we can gather data from various sources */
 	stdin_redir.queue_set = xQueueCreateSet(2);
+	if(!stdin_redir.queue_set){
+		ESP_LOGE(TAG,"Serial event queue set could not be created");
+	}
 	stdin_redir.handle = xRingbufferCreateStatic(sizeof(stdin_redir._buf), RINGBUF_TYPE_BYTEBUF, stdin_redir._buf, &stdin_redir._ringbuf);
 	xRingbufferAddToQueueSetRead(stdin_redir.handle, stdin_redir.queue_set);
 	xQueueAddToSet(uart_queue, stdin_redir.queue_set);
@@ -312,7 +362,6 @@ void initialize_console() {
 	vfs.flags = ESP_VFS_FLAG_DEFAULT;
 	vfs.open = stdin_dummy;
 	vfs.read = stdin_read;
-
 	ESP_ERROR_CHECK(esp_vfs_register("/dev/console", &vfs, NULL));
 	freopen("/dev/console", "r", stdin);
 
@@ -352,6 +401,7 @@ bool console_push(const char *data, size_t size) {
 void console_start() {
 	/* we always run console b/c telnet sends commands to stdin */
 	initialize_console();
+	improv_console_init();
 
 	/* Register commands */
 	MEMTRACE_PRINT_DELTA_MESSAGE("Registering help command");
@@ -449,6 +499,7 @@ static esp_err_t run_command(char * line){
 }
 
 static void * console_thread() {
+	
 	if(!is_recovery_running){
 		MEMTRACE_PRINT_DELTA_MESSAGE("Running autoexec");
 		process_autoexec();

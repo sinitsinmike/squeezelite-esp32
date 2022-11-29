@@ -33,6 +33,7 @@
 #include "esp_netif.h"
 #include "esp_event.h"
 #include "led.h"
+#include "improv.h"
 extern bool bypass_network_manager;
 #define JOIN_TIMEOUT_MS (10000)
 #include "platform_console.h"
@@ -48,6 +49,15 @@ static struct {
     struct arg_str *password;
     struct arg_end *end;
 } join_args;
+static struct {
+    struct arg_lit * conect;
+    struct arg_lit * state;
+    struct arg_lit * info;
+    struct arg_lit * list;
+    struct arg_str *ssid;
+    struct arg_str *password;
+    struct arg_end *end;
+} improv_args;
 
 
 
@@ -185,6 +195,44 @@ static int connect(int argc, char **argv)
 
     return 0;
 }
+extern bool on_improv_command(ImprovCommandStruct_t *command); // command callback 
+static int do_improv(int argc, char **argv)
+{
+    ImprovCommandStruct_t command;
+	int nerrors = arg_parse_msg(argc, argv,(struct arg_hdr **)&improv_args);
+    if (nerrors != 0) {
+        return 1;
+    }
+    if(improv_args.info->count>0){
+        memset(&command,0x00,sizeof(command));
+        command.command = IMPROV_CMD_GET_DEVICE_INFO;
+        on_improv_command(&command);
+    }    
+    if(improv_args.conect->count>0){
+        if(improv_args.ssid->count == 0){
+            ESP_LOGE(__func__,"Parameter ssid is required to connect");
+            return 1;
+        }
+        command.ssid = improv_args.ssid->sval[0];
+        if(improv_args.password->count == 0){
+            command.password= improv_args.password->sval[0];
+        }
+        command.command = IMPROV_CMD_WIFI_SETTINGS;
+        on_improv_command(&command);
+    } 
+    if(improv_args.state->count>0){
+        memset(&command,0x00,sizeof(command));
+        command.command = IMPROV_CMD_GET_CURRENT_STATE;
+        on_improv_command(&command);
+    }
+    if(improv_args.list->count>0){
+        memset(&command,0x00,sizeof(command));
+        command.command = IMPROV_CMD_GET_WIFI_NETWORKS;
+        on_improv_command(&command);
+    }
+
+    return 0;
+}
 void register_wifi_join()
 {
     join_args.timeout = arg_int0(NULL, "timeout", "<t>", "Connection timeout, ms");
@@ -201,10 +249,28 @@ void register_wifi_join()
     };
     ESP_ERROR_CHECK( esp_console_cmd_register(&join_cmd) );
 }
+static void register_improv_debug(){
+    improv_args.conect = arg_lit0(NULL,"connect","Connects to the specified wifi ssid and password");
+    improv_args.ssid = arg_str0(NULL, NULL, "<ssid>", "SSID of AP");
+    improv_args.password = arg_str0(NULL, NULL, "<pass>", "Password of AP");
+    improv_args.info = arg_lit0(NULL,"info","Request the info packet");
+    improv_args.list = arg_lit0(NULL,"list","Request the wifi list packet");
+    improv_args.state = arg_lit0(NULL,"state","Requests the state packet");
 
+    improv_args.end = arg_end(2);
+     const esp_console_cmd_t improv_cmd = {
+        .command = "improv",
+        .help = "Send an improv-wifi serial command to the system",
+        .hint = NULL,
+        .func = &do_improv,
+        .argtable = &improv_args
+    };
+    ESP_ERROR_CHECK( esp_console_cmd_register(&improv_cmd) );
+}
 void register_wifi()
 {
     register_wifi_join();
+    register_improv_debug();
     if(bypass_network_manager){
     	initialise_wifi();
     }
