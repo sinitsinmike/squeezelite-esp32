@@ -1,4 +1,4 @@
-![Cross-Build](https://github.com/sle118/squeezelite-esp32/workflows/Cross-Build/badge.svg?branch=master-cmake)
+![Cross-Build](https://github.com/sle118/squeezelite-esp32/workflows/Cross-Build/badge.svg?branch=master-cmake) [![Update Web Installer](https://github.com/sle118/squeezelite-esp32/actions/workflows/web_deploy.yml/badge.svg?branch=master-v4.3)](https://github.com/sle118/squeezelite-esp32/actions/workflows/web_deploy.yml)
 
 # Squeezelite-esp32
 
