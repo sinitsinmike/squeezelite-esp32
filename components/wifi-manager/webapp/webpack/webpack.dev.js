@@ -136,8 +136,6 @@ module.exports ={
         test: './src/test.ts',
     },
     devServer: {
-
-        
         static: {
             directory: path.resolve(__dirname, './dist'),
             staticOptions: {},
@@ -154,7 +152,6 @@ module.exports ={
           },        
         devMiddleware: {
             publicPath: "/",
-
           },
         open: true,
         compress: true,
@@ -183,7 +180,7 @@ module.exports ={
         console.log('Listening on port:', port);
       },
 
-        onBeforeSetupMiddleware: function (devServer) {
+      setupMiddlewares: function (middlewares, devServer) {
             data.devServer=devServer;
             devServer.app.use(bodyParser.json()) // for parsing application/json
             devServer.app.use(bodyParser.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
@@ -438,6 +435,7 @@ module.exports ={
             devServer.app.get('/reboot', function(req, res) {
                 waitForReboot();
                 res.json({"result" : "OK" }); });
+            return middlewares;
         },
     },
     plugins: [

@@ -143,7 +143,8 @@ add_custom_command(
 			COMMAND xtensa-esp32-elf-objcopy  --globalize-symbol find_command_by_name ${build_dir}/esp-idf/console/libconsole.a
 	        VERBATIM
 )
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/otadata.bin ${build_dir}/ota_data_initial.bin COPYONLY)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/ota_data_initial.bin DESTINATION ${build_dir} )
+
 add_custom_command(
 			TARGET squeezelite.elf
 			PRE_LINK
