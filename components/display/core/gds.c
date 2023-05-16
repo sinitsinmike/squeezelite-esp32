@@ -19,6 +19,10 @@
 #include "gds.h"
 #include "gds_private.h"
 
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+#define LEDC_HIGH_SPEED_MODE LEDC_SPEED_MODE_MAX
+#endif                
+
 static struct GDS_Device Display;
 static struct GDS_BacklightPWM PWMConfig;
 
@@ -34,7 +38,7 @@ struct GDS_Device* GDS_AutoDetect( char *Driver, GDS_DetectFunc* DetectFunc[], s
 				ledc_timer_config_t PWMTimer = {
 						.duty_resolution = LEDC_TIMER_13_BIT,
 						.freq_hz = 5000,                   
-						.speed_mode = LEDC_HIGH_SPEED_MODE,
+                        .speed_mode = LEDC_HIGH_SPEED_MODE,  
 						.timer_num = PWMConfig.Timer,
 					};
 				ledc_timer_config(&PWMTimer);
@@ -188,7 +192,7 @@ bool GDS_Init( struct GDS_Device* Device ) {
             .channel    = Device->Backlight.Channel,
             .duty       = Device->Backlight.PWM,
             .gpio_num   = Device->Backlight.Pin,
-            .speed_mode = LEDC_HIGH_SPEED_MODE,
+            .speed_mode = LEDC_HIGH_SPEED_MODE,  
             .hpoint     = 0,
             .timer_sel  = PWMConfig.Timer,
         };

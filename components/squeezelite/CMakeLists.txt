@@ -6,16 +6,16 @@ idf_component_register( SRC_DIRS . external ac101 tas57xx wm8978
 									esp_common 
 									esp-dsp
 						  			platform_config 
-						 			driver_bt 
 						 			services 
 									spotify
 						 			raop   
 						 			display
 						 			tools
 						 			audio
-									_override
 						EMBED_FILES vu_s.data arrow.data
 )
+
+#									_override
 
 set_source_files_properties(mad.c pcm.c flac.c alac.c helix-aac.c vorbis.c opus.c
     PROPERTIES COMPILE_FLAGS

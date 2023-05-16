@@ -27,6 +27,10 @@
 #define MAX_LED	8
 #define BLOCKTIME	10	// up to portMAX_DELAY
 
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+#define LEDC_HIGH_SPEED_MODE LEDC_SPEED_MODE_MAX
+#endif
+
 static const char *TAG = "led";
 
 static EXT_RAM_ATTR struct led_s {
