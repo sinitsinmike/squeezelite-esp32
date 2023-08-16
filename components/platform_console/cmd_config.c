@@ -31,7 +31,7 @@ const char * desc_bt_source= "Bluetooth Audio Output Options";
 const char * desc_rotary= "Rotary Control";
 
 extern const struct adac_s *dac_set[];
-
+extern void equalizer_apply_loudness();
 #define CODECS_BASE "flac|pcm|mp3|ogg"
 #if NO_FAAD
 #define CODECS_AAC  ""
@@ -130,6 +130,7 @@ static struct {
 } spdif_args;
 static struct {
     struct arg_str *jack_behavior;	
+	struct arg_int *loudness;
     struct arg_end *end;
 } audio_args;
 static struct {
@@ -436,6 +437,28 @@ static int do_audio_cmd(int argc, char **argv){
 		arg_print_errors(f,audio_args.end,desc_audio);
 		fclose(f);
 		return 1;
+	}
+	err = ESP_OK; // suppress any error code that might have happened in a previous step
+
+	if(audio_args.loudness->count>0){
+		char p[4]={0};
+		int loudness_val = audio_args.loudness->ival[0];
+		if( loudness_val < 0 || loudness_val>100){
+			nerrors++;
+            fprintf(f,"Invalid loudness value %d. Valid values are between 0 and 100.\n",loudness_val);
+		}
+		else {
+			itoa(loudness_val,p,10);
+			err = config_set_value(NVS_TYPE_STR, "loudness", p);
+		}
+        if(err!=ESP_OK){
+            nerrors++;
+            fprintf(f,"Error setting Loudness value %s. %s\n",p, esp_err_to_name(err));
+        }
+        else {
+            fprintf(f,"Loudness changed to %s\n",p);
+			equalizer_apply_loudness();
+        }
 	}
 
     if(audio_args.jack_behavior->count>0){
@@ -853,6 +876,9 @@ cJSON * audio_cb(){
 	char * 	p = config_alloc_get_default(NVS_TYPE_STR, "jack_mutes_amp", "n", 0);
     cJSON_AddStringToObject(values,"jack_behavior",(strcmp(p,"1") == 0 ||strcasecmp(p,"y") == 0)?"Headphones":"Subwoofer");
     FREE_AND_NULL(p);    
+	p = config_alloc_get_default(NVS_TYPE_STR, "loudness", "0", 0);
+    cJSON_AddStringToObject(values,"loudness",p);
+    FREE_AND_NULL(p);    	
 	return values;
 }
 cJSON * bt_source_cb(){
@@ -1261,6 +1287,7 @@ static void register_rotary_config(void){
 
 static void register_audio_config(void){
 	audio_args.jack_behavior = arg_str0("j", "jack_behavior","Headphones|Subwoofer","On supported DAC, determines the audio jack behavior. Selecting headphones will cause the external amp to be muted on insert, while selecting Subwoofer will keep the amp active all the time.");
+	audio_args.loudness = arg_int0("l", "loudness","0-100","Sets the loudness level, from 0 to 100. 0 will disable the loudness completely.");	
     audio_args.end = arg_end(6);
 	const esp_console_cmd_t cmd = {
         .command = CFG_TYPE_AUDIO("general"),
