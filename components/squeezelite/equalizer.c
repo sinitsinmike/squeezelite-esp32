@@ -8,12 +8,13 @@
  *
  */
 
-#include "equalizer.h"
 
 #include "esp_equalizer.h"
 #include "math.h"
 #include "platform_config.h"
 #include "squeezelite.h"
+#include "equalizer.h"
+
 #define EQ_BANDS 10
 
 static log_level loglevel = lINFO;
@@ -95,6 +96,20 @@ s8_t *equalizer_get_config(void) {
     free(config);
   }
   return pGains;
+}
+/****************************************************************************************
+ * update equalizer gain
+ */
+void equalizer_update(s8_t *gain) {
+  char config[EQ_BANDS * 4 + 1] = {};
+  int n = 0;
+  for (int i = 0; i < EQ_BANDS; i++) {
+    equalizer.gain[i] = gain[i];
+    n += sprintf(config + n, "%d,", gain[i]);
+  }
+  config[n - 1] = '\0';
+  config_set_value(NVS_TYPE_STR, "equalizer", config);
+  equalizer_apply_loudness();
 }
 /****************************************************************************************
  * initialize equalizer
@@ -202,20 +217,6 @@ void equalizer_apply_loudness() {
   free(pGains);
   equalizer.update = true;
 }
-/****************************************************************************************
- * update equalizer gain
- */
-void equalizer_update(s8_t *gain) {
-  char config[EQ_BANDS * 4 + 1] = {};
-  int n = 0;
-  for (int i = 0; i < EQ_BANDS; i++) {
-    equalizer.gain[i] = gain[i];
-    n += sprintf(config + n, "%d,", gain[i]);
-  }
-  config[n - 1] = '\0';
-  config_set_value(NVS_TYPE_STR, "equalizer", config);
-  equalizer_apply_loudness();
-}
 
 /****************************************************************************************
  * process equalizer
@@ -235,7 +236,7 @@ void equalizer_process(u8_t *buf, u32_t bytes, u32_t sample_rate) {
 /****************************************************************************************
  * Updates the loudness EQ curve based on a new volume level
  */
-void set_loudness(unsigned left, unsigned right) {
+void equalizer_set_loudness(unsigned left, unsigned right) {
   LOG_DEBUG("Setting loudness for volume %d/%d", left, right);
   // Calculate the average gain
   unsigned average_gain = (left + right) / 2;

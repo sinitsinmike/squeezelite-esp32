@@ -116,7 +116,7 @@ void set_volume(unsigned left, unsigned right) {
 		UNLOCK;
 	} 
 	// Call the new function to apply equalization
-    set_loudness(left, right);
+    equalizer_set_loudness(left, right);
 }
 
 bool test_open(const char *device, unsigned rates[], bool userdef_rates) {

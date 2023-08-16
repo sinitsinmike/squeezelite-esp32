@@ -15,5 +15,5 @@ void equalizer_open(u32_t sample_rate);
 void equalizer_close(void);
 void equalizer_update(s8_t *gain);
 void equalizer_process(u8_t *buf, u32_t bytes, u32_t sample_rate);
-void set_loudness(unsigned left, unsigned right);
+void equalizer_set_loudness(unsigned left, unsigned right);
 void equalizer_apply_loudness();
