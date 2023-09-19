@@ -3,7 +3,7 @@
 config LWIP_MAX_SOCKETS
 	range 1 32
 
-menu "Squeezelite-ESP32"
+menu "Zeppelin-test"
 	menu "Logging"
 		config LOGGING_SLIMPROTO
 			string "logging level for slimproto"
@@ -73,6 +73,9 @@ menu "Squeezelite-ESP32"
 				bool "T-WATCH2020 by LilyGo"				
 				select I2C_LOCKED		
 				select TARGET_LOCKED				
+			config ZEPPELIN_TEST	
+				bool "Zeppelin-test"				
+				# select TARGET_LOCKED
 		endchoice	
 		config RELEASE_API
 			string "Software update URL"
@@ -91,12 +94,13 @@ menu "Squeezelite-ESP32"
 			default "SqueezeAMP" if SQUEEZEAMP
 			default "Squeezelite-TWATCH" if TWATCH2020
 			default "Muse" if MUSE
-			default "Squeezelite-ESP32"
+			default "Zeppelin-test" if ZEPPELIN_TEST
 		config FW_PLATFORM_NAME
 			string
 			default "SqueezeAmp" if SQUEEZEAMP
 			default "TWATCH" if TWATCH2020
 			default "Muse" if MUSE
+			default "Zeppelin-test" if ZEPPELIN_TEST
 			default "ESP32"
 		# AGGREGATES - begin
 		# these parameters are "aggregates"	that take precedence. They must have a default value
@@ -105,7 +109,8 @@ menu "Squeezelite-ESP32"
 			default "model=TAS57xx,bck=33,ws=25,do=32,sda=27,scl=26,mute=14:0" if SQUEEZEAMP
 			default "model=I2S,bck=26,ws=25,do=33,i2c=53,sda=21,scl=22" if TWATCH2020
 			default "model=I2S,bck=5,ws=25,do=26,di=35,i2c=16,sda=18,scl=23,mck" if MUSE
-			default ""
+			default "model=I2S,bck=13,ws=15,do=14" if ZEPPELIN_TEST
+			default  ""
 		config SPDIF_CONFIG
 			string
 			default "bck=33,ws=25,do=15" if SQUEEZEAMP
@@ -117,13 +122,16 @@ menu "Squeezelite-ESP32"
 			string
 			default "dc=27,data=19,clk=18" if TWATCH2020	
 			default "mosi=15,miso=2,clk=14"	if MUSE
-			default	""          
+			default	"data=23,clk=18,dc=33,host=1" if ZEPPELIN_TEST
+			default	""
 		config DISPLAY_CONFIG
 			string
 			default "SPI,driver=ST7789,width=240,height=240,cs=5,back=12,speed=16000000,HFlip,VFlip" if TWATCH2020
+			default "SPI,width=256,height=64,cs=5,reset=32,speed=8000000,driver=SSD1322,HFlip,VFlip,rotate" if ZEPPELIN_TEST
 			default ""
 		config ETH_CONFIG
 			string
+			default	"model=lan8720,mdc=4,mdio=2" if ZEPPELIN_TEST
 			default ""
 		# AGGREGATES - end		
 		config DAC_CONTROLSET
@@ -147,6 +155,7 @@ menu "Squeezelite-ESP32"
 		config AMP_GPIO		
 			int
 			default 21 if MUSE
+			default	"-1" if ZEPPELIN_TEST
 			default -1
 		config POWER_GPIO		
 			int
@@ -175,11 +184,12 @@ menu "Squeezelite-ESP32"
 			string
 			default "0=ir" if SQUEEZEAMP
 			default "" if TWATCH2020
+			default	"" if ZEPPELIN_TEST
 	endmenu
 
 	menu "Audio settings"
 		menu "DAC settings"
-			visible if BASIC_I2C_BT
+			visible if BASIC_I2C_BT && !ZEPPELIN_TEST
 			menu "I2S settings"
 				config I2S_NUM
 					int "I2S channel (0 or 1)"
@@ -236,7 +246,7 @@ menu "Squeezelite-ESP32"
 		endmenu
 
 		menu "SPDIF settings"
-			visible if BASIC_I2C_BT
+			visible if BASIC_I2C_BT && !ZEPPELIN_TEST
 		    config SDIF_NUM
 		        int "I2S channel for SDPIF (0 or 1)"
 		        default 0
@@ -262,11 +272,13 @@ menu "Squeezelite-ESP32"
 		menu "A2DP settings"
 		    config A2DP_SINK_NAME
 		        string "Name of Bluetooth A2DP device"
-		        default "SMSL BT4.2"
+		        default "JBL Clip 3"  if ZEPPELIN_TEST
+				default "" 
 		        help
 		            This is the name of the bluetooth speaker that Squeezelite will try connecting to.
 		    config A2DP_DEV_NAME
 		        string "Name of Squeezelite device to use when connecting to A2DP device"
+				default "Zeppelin-test" if ZEPPELIN_TEST
 		        default "Squeezelite"
 		        help
 		            This is the name of the device that the Bluetooth speaker will see when it is connected to.
@@ -292,19 +304,21 @@ menu "Squeezelite-ESP32"
 		config BT_NAME
 			depends on BT_SINK
 			string "Name of Bluetooth A2DP device"
+				default "Zeppelin-test" if ZEPPELIN_TEST
 		        default "ESP32-BT"
 		    help
 				This is the name of the bluetooth speaker that will be broadcasted
 		config BT_SINK_PIN
 			depends on BT_SINK
 			int "Bluetooth PIN code"
-		        default 1234
+		        default 0000
 		config AIRPLAY_SINK
 			bool "AirPlay receiver"
 			default y
 		config AIRPLAY_NAME
 			depends on AIRPLAY_SINK
 			string "Name of AirPlay device"
+				default "Zeppelin-test-AirPlay" if ZEPPELIN_TEST
 				default "ESP32-AirPlay"
 		    help
 				This is the name of the AirPlay speaker that will be broadcasted
@@ -340,7 +354,7 @@ menu "Squeezelite-ESP32"
 	endmenu
 
 	menu "Various I/O"
-		visible if !TWATCH2020
+		visible if !TWATCH2020 && !ZEPPELIN_TEST
 		config I2C_CONFIG
 			string "I2C system configuration"
 			default ""
@@ -377,7 +391,7 @@ menu "Squeezelite-ESP32"
 	endmenu
 	
 	menu "LED configuration"
-		visible if !SQUEEZEAMP && !TWATCH2020 && !MUSE
+		visible if !SQUEEZEAMP && !TWATCH2020 && !MUSE && !ZEPPELIN_TEST
 		config LED_GREEN_GPIO
 			int "Green led GPIO"
 			help
@@ -454,6 +468,7 @@ menu "Squeezelite-ESP32"
 	
 	config DEFAULT_COMMAND_LINE
         string "Default command line to execute"
+		default "squeezelite -o I2S -b 500:2000 -d all=info -C 30 -W" if ZEPPELIN_TEST
         default "squeezelite -o I2S -b 500:2000 -d all=info -C 30"
         help
             This is the command to run when starting the device
