@@ -1,4 +1,5 @@
 build/
+build-release/
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/settings.json
@@ -18,3 +19,7 @@ components/wifi-manager/UML-State-Machine-in-C
 envfile.txt
 artifacts
 web-installer
+build-release/zeppelin-test-v001.bin
+sdkconfig
+sdkconfig.defaults
+

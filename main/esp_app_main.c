@@ -378,7 +378,7 @@ void app_main()
 	services_init();
 	MEMTRACE_PRINT_DELTA();
 	ESP_LOGI(TAG,"Initializing display");
-	display_init("SqueezeESP32");
+	display_init("Zeppelin");
 	MEMTRACE_PRINT_DELTA();
 	char *target = config_alloc_get_str("target", CONFIG_TARGET, NULL);
 	if (target) {

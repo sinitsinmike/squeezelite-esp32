@@ -65,18 +65,23 @@ menu "Zeppelin-test"
 				select JACK_LOCKED
 				select BAT_LOCKED
 				select I2C_LOCKED
-				select AMP_LOCKED				
+				select AMP_LOCKED
 				select TARGET_LOCKED
 			config BASIC_I2C_BT
-				bool "Generic I2S & Bluetooth"				
-			config TWATCH2020	
-				bool "T-WATCH2020 by LilyGo"				
-				select I2C_LOCKED		
-				select TARGET_LOCKED				
-			config ZEPPELIN_TEST	
-				bool "Zeppelin-test"				
-				# select TARGET_LOCKED
-		endchoice	
+				bool "Generic I2S & Bluetooth"
+			config TWATCH2020
+				bool "T-WATCH2020 by LilyGo"
+				select I2C_LOCKED
+				select TARGET_LOCKED
+			config ZEPPELIN_TEST
+				bool "Zeppelin-test"
+				#select JACK_LOCKED
+				#select BAT_LOCKED
+				select I2C_LOCKED
+				select LED_LOCKED
+				#select SPKFAULT_LOCKED
+				select TARGET_LOCKED
+		endchoice
 		config RELEASE_API
 			string "Software update URL"
 			default "https://api.github.com/repos/sle118/squeezelite-esp32/releases"
@@ -114,6 +119,7 @@ menu "Zeppelin-test"
 		config SPDIF_CONFIG
 			string
 			default "bck=33,ws=25,do=15" if SQUEEZEAMP
+			default	"" if ZEPPELIN_TEST
 			default	""
 		config GPIO_EXP_CONFIG		
 			string
@@ -131,14 +137,14 @@ menu "Zeppelin-test"
 			default ""
 		config ETH_CONFIG
 			string
-			default	"model=lan8720,mdc=4,mdio=2" if ZEPPELIN_TEST
+			default	"model=lan8720,mdc=4,mdio=2,rst=1" if ZEPPELIN_TEST
 			default ""
-		# AGGREGATES - end		
+		# AGGREGATES - end
 		config DAC_CONTROLSET
 			string
 			default "{ \"init\": [ {\"reg\":41, \"val\":128}, {\"reg\":18, \"val\":255} ], \"poweron\": [ {\"reg\":18, \"val\":64, \"mode\":\"or\"} ], \"poweroff\": [ {\"reg\":18, \"val\":191, \"mode\":\"and\"} ] }" if TWATCH2020
 			default "{\"init\":[ {\"reg\":0,\"val\":128}, {\"reg\":0,\"val\":0}, {\"reg\":25,\"val\":4}, {\"reg\":1,\"val\":80}, {\"reg\":2,\"val\":0},	{\"reg\":8,\"val\":0}, {\"reg\":4,\"val\":192},	{\"reg\":0,\"val\":18}, {\"reg\":1,\"val\":0}, {\"reg\":23,\"val\":24}, {\"reg\":24,\"val\":2}, {\"reg\":38,\"val\":9}, {\"reg\":39,\"val\":144}, {\"reg\":42,\"val\":144}, {\"reg\":43,\"val\":128}, {\"reg\":45,\"val\":128}, {\"reg\":27,\"val\":0}, {\"reg\":26,\"val\":0}, {\"reg\":2,\"val\":240}, {\"reg\":2,\"val\":0},	{\"reg\":29,\"val\":28}, {\"reg\":4,\"val\":48}, {\"reg\":25,\"val\":0}, {\"reg\":46,\"val\":33}, {\"reg\":47,\"val\":33} ]}" if MUSE
-			default ""		
+			default ""
 		config AUDIO_CONTROLS
 			string
 			default "[{\"gpio\":32, \"pull\":true, \"long_press\":1000, \"normal\":{\"pressed\":\"ACTRLS_VOLDOWN\"}, \"longpress\":{\"pressed\":\"ACTRLS_PREV\"}}, {\"gpio\":19, \"pull\":true, \"long_press\":1000, \"normal\":{\"pressed\":\"ACTRLS_VOLUP\"}, \"longpress\":{\"pressed\":\"ACTRLS_NEXT\"}}, {\"gpio\":12, \"pull\":true, \"long_press\":1000, \"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]" if MUSE
@@ -147,29 +153,30 @@ menu "Zeppelin-test"
 			string
 			default "channel=7,scale=20.24,atten=0" if SQUEEZEAMP
 			default "channel=5,scale=7.00,atten=3,cells=1" if MUSE
-			default ""			
+			default ""
 		config TARGET
 			string
 			default "muse" if MUSE
-			default ""			
-		config AMP_GPIO		
+			default "Zeppelin-test" if ZEPPELIN_TEST
+			default ""
+		config AMP_GPIO
 			int
 			default 21 if MUSE
-			default	"-1" if ZEPPELIN_TEST
+			default	-1 if ZEPPELIN_TEST
 			default -1
-		config POWER_GPIO		
+		config POWER_GPIO
 			int
-			default -1			
+			default -1
 		config JACK_GPIO
 			int
 			default 34 if SQUEEZEAMP || MUSE
-			default -1			
+			default -1
 		config SPKFAULT_GPIO
 			int
 			default 2 if SQUEEZEAMP
-			default -1			
+			default -1
 		config BAT_CHANNEL
-			int 
+			int
 			default 7 if SQUEEZEAMP
 			default -1
 		config LED_GREEN_GPIO
@@ -332,11 +339,11 @@ menu "Zeppelin-test"
 			bool "Spotify (cspot) receiver"
 			default y
 			help
-				Enable Spotify connect using CSpot		
+				Enable Spotify connect using CSpot
 	endmenu
 	
 	menu "Controls"
-		depends on !MUSE
+		depends on !MUSE && !ZEPPELIN_TEST
 		config AUDIO_CONTROLS
 			string "Audio buttons set (JSON)"
 			help
@@ -379,17 +386,18 @@ menu "Zeppelin-test"
 				[:0|1] means set the active value for that GPIO can be low or high
 		config ROTARY_ENCODER
 			string "Rotary Encoder configuration"
+			default ""  if ZEPPELIN_TEST
 			default ""
 			help
 				Set GPIO for rotary encoder (quadrature phase). See README on SqueezeESP32 project's GitHub for more details
-				A=<gpio>,B=<gpio>[,SW=gpio>[[,knobonly[=<ms>]|[,volume][,longpress]]			
+				A=<gpio>,B=<gpio>[,SW=gpio>[[,knobonly[=<ms>]|[,volume][,longpress]]
 		config GPIO_EXP_CONFIG
 			string "GPIO expander configuration"
 			help
 				Set parameters of GPIO extender
 				model=<model>[,addr=<addr>][,base=<100..N>][,count=<0..32>][,intr=<gpio>][,port=dac|system]				
 	endmenu
-	
+
 	menu "LED configuration"
 		visible if !SQUEEZEAMP && !TWATCH2020 && !MUSE && !ZEPPELIN_TEST
 		config LED_GREEN_GPIO
@@ -399,7 +407,7 @@ menu "Zeppelin-test"
 		config LED_GREEN_GPIO_LEVEL
 			int "Green led ON level"
 			depends on LED_GREEN_GPIO != -1
-		config LED_RED_GPIO				
+		config LED_RED_GPIO
 			int "Red led GPIO"
 			help
 				Set to -1 for no LED
@@ -409,10 +417,10 @@ menu "Zeppelin-test"
 			default 0 if SQUEEZEAMP
 			default 1
 	endmenu
-	
-    menu "Audio JACK"	
+
+    menu "Audio JACK"
 		visible if !TARGET_LOCKED
-		config JACK_GPIO		
+		config JACK_GPIO
 			int "Jack insertion GPIO"
 			help
 				GPIO to detect speaker jack insertion. Set to -1 for no detection.
@@ -420,11 +428,11 @@ menu "Zeppelin-test"
 			depends on JACK_GPIO != -1
 			int "Level when inserted (0/1)"
 			default 0
-	endmenu	
-	
-	menu "External amplifier control"	
+	endmenu
+
+	menu "External amplifier control"
 		visible if !AMP_LOCKED
-		config AMP_GPIO		
+		config AMP_GPIO
 			int "Amplifier GPIO"
 			help
 				GPIO to switch on/off external amplifier. Set to -1 for no amplifier. 
@@ -432,9 +440,9 @@ menu "Zeppelin-test"
 			depends on AMP_GPIO != -1
 			int "Active level(0/1)"
 			default 1
-	endmenu	
-	
-	menu "Power on/off status"	
+	endmenu
+
+	menu "Power on/off status"
 		config POWER_GPIO
 			int "Power on/off GPIO"
 			help
@@ -443,11 +451,11 @@ menu "Zeppelin-test"
 			depends on POWER_GPIO != -1
 			int "Active level(0/1)"
 			default 1
-	endmenu	
-	
-	menu "Speaker Fault"	
+	endmenu
+
+	menu "Speaker Fault"
 		visible if !TARGET_LOCKED
-		config SPKFAULT_GPIO		
+		config SPKFAULT_GPIO
 			int "Speaker fault GPIO"
 			help
 				GPIO to detect speaker fault condition. Set to -1 for no detection.
@@ -456,7 +464,7 @@ menu "Zeppelin-test"
 			int "Level when fault (0/1)"
 			default 0
 	endmenu
-	
+
 	menu "Battery measure"
 		visible if !TARGET_LOCKED
 		config BAT_CONFIG
@@ -464,11 +472,11 @@ menu "Zeppelin-test"
 			help
 				Sets parameters for battery voltage measure
 				channel=<0..7>,scale=<ratio_to_4096>,atten=<adc_atten>,cells=<1..3>
-	endmenu	
-	
+	endmenu
+
 	config DEFAULT_COMMAND_LINE
         string "Default command line to execute"
-		default "squeezelite -o I2S -b 500:2000 -d all=info -C 30 -W" if ZEPPELIN_TEST
+		default "squeezelite -o I2S -b 500:2000 -d all=info -C 30 -r 44100-96000 -R" if ZEPPELIN_TEST
         default "squeezelite -o I2S -b 500:2000 -d all=info -C 30"
         help
             This is the command to run when starting the device
