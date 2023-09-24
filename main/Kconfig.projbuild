@@ -158,7 +158,7 @@ menu "Zeppelin"
 			default ""
 		config TARGET
 			string
-			default "muse" if MUSE
+			default "Muse" if MUSE
 			default "Zeppelin" if ZEPPELIN
 			default ""
 		config AMP_GPIO
@@ -282,7 +282,7 @@ menu "Zeppelin"
 		    config A2DP_SINK_NAME
 		        string "Name of Bluetooth A2DP device"
 		        default "JBL Clip 3"  if ZEPPELIN
-				default "" 
+				default ""
 		        help
 		            This is the name of the bluetooth speaker that Squeezelite will try connecting to.
 		    config A2DP_DEV_NAME
@@ -348,6 +348,8 @@ menu "Zeppelin"
 		depends on !MUSE && !ZEPPELIN
 		config AUDIO_CONTROLS
 			string "Audio buttons set (JSON)"
+			default "[{\"gpio\":39, \"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]" if ZEPPELIN
+			default ""
 			help
 				Configuration of buttons (see README for syntax)
 	endmenu	
