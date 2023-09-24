@@ -3,7 +3,7 @@
 config LWIP_MAX_SOCKETS
 	range 1 32
 
-menu "Zeppelin-test"
+menu "Zeppelin"
 	menu "Logging"
 		config LOGGING_SLIMPROTO
 			string "logging level for slimproto"
@@ -73,8 +73,8 @@ menu "Zeppelin-test"
 				bool "T-WATCH2020 by LilyGo"
 				select I2C_LOCKED
 				select TARGET_LOCKED
-			config ZEPPELIN_TEST
-				bool "Zeppelin-test"
+			config ZEPPELIN
+				bool "Zeppelin"
 				#select JACK_LOCKED
 				#select BAT_LOCKED
 				select I2C_LOCKED
@@ -85,11 +85,13 @@ menu "Zeppelin-test"
 		config RELEASE_API
 			string "Software update URL"
 			default "https://api.github.com/repos/sle118/squeezelite-esp32/releases"
+			default "https://api.github.com/repos/JacekZubielik/squeezelite-esp32/releases" if ZEPPELIN
 			help
 				Set the URL of the API that the front-end UI will use to fetch software updates
 		config SQUEEZELITE_ESP32_RELEASE_URL
 			string "Release URL"
 			default "https://github.com/sle118/squeezelite-esp32/releases"
+			default "https://github.com/JacekZubielik/squeezelite-esp32/releases" if ZEPPELIN
 			help
 				Set the URL where users can see a list of releases
 		# you can't change default values once they are set so changing "Target" will not reset
@@ -99,13 +101,13 @@ menu "Zeppelin-test"
 			default "SqueezeAMP" if SQUEEZEAMP
 			default "Squeezelite-TWATCH" if TWATCH2020
 			default "Muse" if MUSE
-			default "Zeppelin-test" if ZEPPELIN_TEST
+			default "Zeppelin" if ZEPPELIN
 		config FW_PLATFORM_NAME
 			string
 			default "SqueezeAmp" if SQUEEZEAMP
 			default "TWATCH" if TWATCH2020
 			default "Muse" if MUSE
-			default "Zeppelin-test" if ZEPPELIN_TEST
+			default "Zeppelin" if ZEPPELIN
 			default "ESP32"
 		# AGGREGATES - begin
 		# these parameters are "aggregates"	that take precedence. They must have a default value
@@ -114,12 +116,12 @@ menu "Zeppelin-test"
 			default "model=TAS57xx,bck=33,ws=25,do=32,sda=27,scl=26,mute=14:0" if SQUEEZEAMP
 			default "model=I2S,bck=26,ws=25,do=33,i2c=53,sda=21,scl=22" if TWATCH2020
 			default "model=I2S,bck=5,ws=25,do=26,di=35,i2c=16,sda=18,scl=23,mck" if MUSE
-			default "model=I2S,bck=13,ws=15,do=14" if ZEPPELIN_TEST
+			default "model=I2S,bck=13,ws=15,do=14" if ZEPPELIN
 			default  ""
 		config SPDIF_CONFIG
 			string
 			default "bck=33,ws=25,do=15" if SQUEEZEAMP
-			default	"" if ZEPPELIN_TEST
+			default	"" if ZEPPELIN
 			default	""
 		config GPIO_EXP_CONFIG		
 			string
@@ -128,16 +130,16 @@ menu "Zeppelin-test"
 			string
 			default "dc=27,data=19,clk=18" if TWATCH2020	
 			default "mosi=15,miso=2,clk=14"	if MUSE
-			default	"data=23,clk=18,dc=33,host=1" if ZEPPELIN_TEST
+			default	"data=23,clk=18,dc=33,host=1" if ZEPPELIN
 			default	""
 		config DISPLAY_CONFIG
 			string
 			default "SPI,driver=ST7789,width=240,height=240,cs=5,back=12,speed=16000000,HFlip,VFlip" if TWATCH2020
-			default "SPI,width=256,height=64,cs=5,reset=32,speed=8000000,driver=SSD1322,HFlip,VFlip,rotate" if ZEPPELIN_TEST
+			default "SPI,width=256,height=64,cs=5,reset=32,speed=8000000,driver=SSD1322,HFlip,VFlip,rotate" if ZEPPELIN
 			default ""
 		config ETH_CONFIG
 			string
-			default	"model=lan8720,mdc=4,mdio=2,rst=1" if ZEPPELIN_TEST
+			default	"model=lan8720,mdc=4,mdio=2,rst=1" if ZEPPELIN
 			default ""
 		# AGGREGATES - end
 		config DAC_CONTROLSET
@@ -157,12 +159,12 @@ menu "Zeppelin-test"
 		config TARGET
 			string
 			default "muse" if MUSE
-			default "Zeppelin-test" if ZEPPELIN_TEST
+			default "Zeppelin" if ZEPPELIN
 			default ""
 		config AMP_GPIO
 			int
 			default 21 if MUSE
-			default	-1 if ZEPPELIN_TEST
+			default	-1 if ZEPPELIN
 			default -1
 		config POWER_GPIO
 			int
@@ -191,12 +193,12 @@ menu "Zeppelin-test"
 			string
 			default "0=ir" if SQUEEZEAMP
 			default "" if TWATCH2020
-			default	"" if ZEPPELIN_TEST
+			default	"36=ir" if ZEPPELIN
 	endmenu
 
 	menu "Audio settings"
 		menu "DAC settings"
-			visible if BASIC_I2C_BT && !ZEPPELIN_TEST
+			visible if BASIC_I2C_BT && !ZEPPELIN
 			menu "I2S settings"
 				config I2S_NUM
 					int "I2S channel (0 or 1)"
@@ -253,7 +255,7 @@ menu "Zeppelin-test"
 		endmenu
 
 		menu "SPDIF settings"
-			visible if BASIC_I2C_BT && !ZEPPELIN_TEST
+			visible if BASIC_I2C_BT && !ZEPPELIN
 		    config SDIF_NUM
 		        int "I2S channel for SDPIF (0 or 1)"
 		        default 0
@@ -279,13 +281,13 @@ menu "Zeppelin-test"
 		menu "A2DP settings"
 		    config A2DP_SINK_NAME
 		        string "Name of Bluetooth A2DP device"
-		        default "JBL Clip 3"  if ZEPPELIN_TEST
+		        default "JBL Clip 3"  if ZEPPELIN
 				default "" 
 		        help
 		            This is the name of the bluetooth speaker that Squeezelite will try connecting to.
 		    config A2DP_DEV_NAME
 		        string "Name of Squeezelite device to use when connecting to A2DP device"
-				default "Zeppelin-test" if ZEPPELIN_TEST
+				default "Zeppelin" if ZEPPELIN
 		        default "Squeezelite"
 		        help
 		            This is the name of the device that the Bluetooth speaker will see when it is connected to.
@@ -311,7 +313,7 @@ menu "Zeppelin-test"
 		config BT_NAME
 			depends on BT_SINK
 			string "Name of Bluetooth A2DP device"
-				default "Zeppelin-test" if ZEPPELIN_TEST
+				default "Zeppelin" if ZEPPELIN
 		        default "ESP32-BT"
 		    help
 				This is the name of the bluetooth speaker that will be broadcasted
@@ -325,7 +327,7 @@ menu "Zeppelin-test"
 		config AIRPLAY_NAME
 			depends on AIRPLAY_SINK
 			string "Name of AirPlay device"
-				default "Zeppelin-test-AirPlay" if ZEPPELIN_TEST
+				default "Zeppelin-AirPlay" if ZEPPELIN
 				default "ESP32-AirPlay"
 		    help
 				This is the name of the AirPlay speaker that will be broadcasted
@@ -343,7 +345,7 @@ menu "Zeppelin-test"
 	endmenu
 	
 	menu "Controls"
-		depends on !MUSE && !ZEPPELIN_TEST
+		depends on !MUSE && !ZEPPELIN
 		config AUDIO_CONTROLS
 			string "Audio buttons set (JSON)"
 			help
@@ -361,7 +363,7 @@ menu "Zeppelin-test"
 	endmenu
 
 	menu "Various I/O"
-		visible if !TWATCH2020 && !ZEPPELIN_TEST
+		visible if !TWATCH2020 && !ZEPPELIN
 		config I2C_CONFIG
 			string "I2C system configuration"
 			default ""
@@ -386,7 +388,7 @@ menu "Zeppelin-test"
 				[:0|1] means set the active value for that GPIO can be low or high
 		config ROTARY_ENCODER
 			string "Rotary Encoder configuration"
-			default ""  if ZEPPELIN_TEST
+			default ""  if ZEPPELIN
 			default ""
 			help
 				Set GPIO for rotary encoder (quadrature phase). See README on SqueezeESP32 project's GitHub for more details
@@ -399,7 +401,7 @@ menu "Zeppelin-test"
 	endmenu
 
 	menu "LED configuration"
-		visible if !SQUEEZEAMP && !TWATCH2020 && !MUSE && !ZEPPELIN_TEST
+		visible if !SQUEEZEAMP && !TWATCH2020 && !MUSE && !ZEPPELIN
 		config LED_GREEN_GPIO
 			int "Green led GPIO"
 			help
@@ -476,7 +478,7 @@ menu "Zeppelin-test"
 
 	config DEFAULT_COMMAND_LINE
         string "Default command line to execute"
-		default "squeezelite -o I2S -b 500:2000 -d all=info -C 30 -r 44100-96000 -R" if ZEPPELIN_TEST
+		default "squeezelite -o I2S -b 500:2000 -d all=info -C 30 -r 44100-96000 -R -n \"Zeppelin\"" if ZEPPELIN
         default "squeezelite -o I2S -b 500:2000 -d all=info -C 30"
         help
             This is the command to run when starting the device
