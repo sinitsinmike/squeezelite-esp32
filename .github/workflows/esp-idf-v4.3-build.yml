@@ -142,7 +142,7 @@ jobs:
         release_name: ${{ env.name }}
         body: ${{ env.description }}
         draft: false
-        prerelease: true
+        prerelease: false
     - name: Upload Release Asset - Squeezelite binary file
       if: env.release_flag == 1         
       id: upload-release-asset 
