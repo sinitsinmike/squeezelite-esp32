@@ -10,9 +10,9 @@ use Slim::Utils::Log;
 use Slim::Utils::Prefs;
 
 use constant FIRMWARE_POLL_INTERVAL => 3600 * (5 + rand());
-use constant GITHUB_RELEASES_URI => "https://api.github.com/repos/sle118/squeezelite-esp32/releases";
+use constant GITHUB_RELEASES_URI => "https://api.github.com/repos/JacekZubielik/squeezelite-esp32/releases";
 use constant GITHUB_ASSET_URI => GITHUB_RELEASES_URI . "/assets/";
-use constant GITHUB_DOWNLOAD_URI => "https://github.com/sle118/squeezelite-esp32/releases/download/";
+use constant GITHUB_DOWNLOAD_URI => "https://github.com/JacekZubielik/squeezelite-esp32/releases/download/";
 use constant ESP32_STATUS_URI => "http://%s/status.json";
 use constant BASE_PATH => 'plugins/SqueezeESP32/firmware/';
 
