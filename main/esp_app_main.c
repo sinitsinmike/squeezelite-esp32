@@ -212,7 +212,7 @@ void register_default_nvs(){
 		char * name = alloc_get_string_with_mac(DEFAULT_HOST_NAME);
 		if(name){
 			cjson_update_string(&cspot_config,"deviceName",name);
-			cjson_update_number(&cspot_config,"bitrate",160);
+			cjson_update_number(&cspot_config,"bitrate",320);
 			// the call below saves the config and frees the json pointer
 			config_set_cjson_str_and_free("cspot_config",cspot_config);
 			FREE_AND_NULL(name);

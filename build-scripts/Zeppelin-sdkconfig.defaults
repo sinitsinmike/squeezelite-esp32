@@ -194,8 +194,8 @@ CONFIG_LOGGING_OUTPUT="info"
 #CONFIG_MUTE_GPIO_LEVEL=n
 #CONFIG_TARGET_LOCKED=n
 #
-CONFIG_DEFAULT_HOST_NAME="Zeppelin"
-CONFIG_HOST_NAME="Zeppelin"
+CONFIG_DEFAULT_HOST_NAME="zeppelin"
+#CONFIG_HOST_NAME="Zeppelin"
 #
 # Target
 # 
@@ -213,7 +213,7 @@ CONFIG_FW_PLATFORM_NAME="Zeppelin"
 #CONFIG_DISPLAY_CONFIG="SPI,width=256,height=64,cs=5,reset=32,speed=8000000,driver=SSD1322,HFlip,VFlip,rotate"
 #CONFIG_ETH_CONFIG="eth_config: model=lan8720,mdc=4,mdio=2,rst=1"
 #CONFIG_DAC_CONTROLSET=""
-CONFIG_AUDIO_CONTROLS="[{\"gpio\":39,\"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]"
+#CONFIG_AUDIO_CONTROLS="[{\"gpio\":39,\"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]"
 #CONFIG_BAT_CONFIG=""
 CONFIG_TARGET="Zeppelin"
 #CONFIG_AMP_GPIO=-1
@@ -351,7 +351,7 @@ CONFIG_CSPOT_CONFIG="{\"deviceName\":\"Zeppelin\",\"bitrate\":320}"
 #
 # Audio controls
 #
-CONFIG_AUDIO_CONTROLS=""
+#CONFIG_AUDIO_CONTROLS=""
 # end of Audio Contorls configuration
 
 #
@@ -411,7 +411,7 @@ CONFIG_APPTRACE_LOCK_ENABLE=y
 # Bluetooth
 #
 CONFIG_BT_ENABLED=y
-CONFIG_BT_CTRL_ESP32=y # dodane z AMP
+CONFIG_BT_CTRL_ESP32=y
 #
 # Bluetooth controller
 #

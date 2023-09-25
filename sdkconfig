@@ -177,7 +177,6 @@ CONFIG_I2C_LOCKED=y
 CONFIG_LED_LOCKED=y
 CONFIG_MUTE_GPIO_LEVEL=0
 CONFIG_TARGET_LOCKED=y
-CONFIG_DEFAULT_HOST_NAME_LOCKED=y
 
 #
 # Target
@@ -197,12 +196,12 @@ CONFIG_GPIO_EXP_CONFIG=""
 CONFIG_SPI_CONFIG="data=23,clk=18,dc=33,host=1"
 CONFIG_DISPLAY_CONFIG="SPI,width=256,height=64,cs=5,reset=32,speed=8000000,driver=SSD1322,HFlip,VFlip,rotate"
 CONFIG_ETH_CONFIG="model=lan8720,mdc=4,mdio=2,rst=1"
-CONFIG_DEFAULT_HOST_NAME="Zeppelin"
-CONFIG_DAC_CONTROLSET=""
+CONFIG_DEFAULT_HOST_NAME="zeppelin"
 CONFIG_AUDIO_CONTROLS="[{\"gpio\":39,\"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]"
+CONFIG_DAC_CONTROLSET=""
 CONFIG_BAT_CONFIG=""
 CONFIG_TARGET="Zeppelin"
-CONFIG_AMP_GPIO=-1
+CONFIG_AMP_GPIO=12
 CONFIG_POWER_GPIO=-1
 CONFIG_JACK_GPIO=-1
 CONFIG_SPKFAULT_GPIO=-1
@@ -274,6 +273,7 @@ CONFIG_ROTARY_ENCODER="A=35,B=34,SW=39,knobonly,volume,longpress"
 #
 # External amplifier control
 #
+CONFIG_AMP_GPIO_LEVEL=1
 # end of External amplifier control
 
 #
