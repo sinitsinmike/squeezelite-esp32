@@ -46,6 +46,10 @@ menu "Zeppelin"
 	config TARGET_LOCKED
 		bool
 		default n
+	config DEFAULT_HOST_NAME_LOCKED
+	 	bool
+
+
 	menu "Target"
 		choice OUTPUT_TYPE
 			prompt "Main system"
@@ -75,6 +79,7 @@ menu "Zeppelin"
 				select TARGET_LOCKED
 			config ZEPPELIN
 				bool "Zeppelin"
+				select DEFAULT_HOST_NAME_LOCKED
 				#select JACK_LOCKED
 				#select BAT_LOCKED
 				select I2C_LOCKED
@@ -84,14 +89,14 @@ menu "Zeppelin"
 		endchoice
 		config RELEASE_API
 			string "Software update URL"
-			default "https://api.github.com/repos/sle118/squeezelite-esp32/releases"
-			default "https://api.github.com/repos/JacekZubielik/squeezelite-esp32/releases" if ZEPPELIN
+			# default "https://api.github.com/repos/sle118/squeezelite-esp32/releases"
+			default "https://api.github.com/repos/JacekZubielik/squeezelite-esp32/releases"
 			help
 				Set the URL of the API that the front-end UI will use to fetch software updates
 		config SQUEEZELITE_ESP32_RELEASE_URL
 			string "Release URL"
-			default "https://github.com/sle118/squeezelite-esp32/releases"
-			default "https://github.com/JacekZubielik/squeezelite-esp32/releases" if ZEPPELIN
+			# default "https://github.com/sle118/squeezelite-esp32/releases"
+			default "https://github.com/JacekZubielik/squeezelite-esp32/releases"
 			help
 				Set the URL where users can see a list of releases
 		# you can't change default values once they are set so changing "Target" will not reset
@@ -118,12 +123,13 @@ menu "Zeppelin"
 			default "model=I2S,bck=5,ws=25,do=26,di=35,i2c=16,sda=18,scl=23,mck" if MUSE
 			default "model=I2S,bck=13,ws=15,do=14" if ZEPPELIN
 			default  ""
+
 		config SPDIF_CONFIG
 			string
 			default "bck=33,ws=25,do=15" if SQUEEZEAMP
 			default	"" if ZEPPELIN
 			default	""
-		config GPIO_EXP_CONFIG		
+		config GPIO_EXP_CONFIG
 			string
 			default	""
 		config SPI_CONFIG
@@ -142,15 +148,23 @@ menu "Zeppelin"
 			default	"model=lan8720,mdc=4,mdio=2,rst=1" if ZEPPELIN
 			default ""
 		# AGGREGATES - end
+		config DEFAULT_HOST_NAME
+			string
+			default "Zeppelin" if ZEPPELIN
+			default "squeezelite"
+
 		config DAC_CONTROLSET
 			string
 			default "{ \"init\": [ {\"reg\":41, \"val\":128}, {\"reg\":18, \"val\":255} ], \"poweron\": [ {\"reg\":18, \"val\":64, \"mode\":\"or\"} ], \"poweroff\": [ {\"reg\":18, \"val\":191, \"mode\":\"and\"} ] }" if TWATCH2020
-			default "{\"init\":[ {\"reg\":0,\"val\":128}, {\"reg\":0,\"val\":0}, {\"reg\":25,\"val\":4}, {\"reg\":1,\"val\":80}, {\"reg\":2,\"val\":0},	{\"reg\":8,\"val\":0}, {\"reg\":4,\"val\":192},	{\"reg\":0,\"val\":18}, {\"reg\":1,\"val\":0}, {\"reg\":23,\"val\":24}, {\"reg\":24,\"val\":2}, {\"reg\":38,\"val\":9}, {\"reg\":39,\"val\":144}, {\"reg\":42,\"val\":144}, {\"reg\":43,\"val\":128}, {\"reg\":45,\"val\":128}, {\"reg\":27,\"val\":0}, {\"reg\":26,\"val\":0}, {\"reg\":2,\"val\":240}, {\"reg\":2,\"val\":0},	{\"reg\":29,\"val\":28}, {\"reg\":4,\"val\":48}, {\"reg\":25,\"val\":0}, {\"reg\":46,\"val\":33}, {\"reg\":47,\"val\":33} ]}" if MUSE
+			default "{ \"init\": [ {\"reg\":0, \"val\":128}, {\"reg\":0, \"val\":0}, {\"reg\":25, \"val\":4}, {\"reg\":1, \"val\":80}, {\"reg\":2,\"val\":0},	{\"reg\":8,\"val\":0}, {\"reg\":4,\"val\":192},	{\"reg\":0,\"val\":18}, {\"reg\":1,\"val\":0}, {\"reg\":23,\"val\":24}, {\"reg\":24,\"val\":2}, {\"reg\":38,\"val\":9}, {\"reg\":39,\"val\":144}, {\"reg\":42,\"val\":144}, {\"reg\":43,\"val\":128}, {\"reg\":45,\"val\":128}, {\"reg\":27,\"val\":0}, {\"reg\":26,\"val\":0}, {\"reg\":2,\"val\":240}, {\"reg\":2,\"val\":0},	{\"reg\":29,\"val\":28}, {\"reg\":4,\"val\":48}, {\"reg\":25,\"val\":0}, {\"reg\":46,\"val\":33}, {\"reg\":47,\"val\":33} ]}" if MUSE
 			default ""
 		config AUDIO_CONTROLS
 			string
-			default "[{\"gpio\":32, \"pull\":true, \"long_press\":1000, \"normal\":{\"pressed\":\"ACTRLS_VOLDOWN\"}, \"longpress\":{\"pressed\":\"ACTRLS_PREV\"}}, {\"gpio\":19, \"pull\":true, \"long_press\":1000, \"normal\":{\"pressed\":\"ACTRLS_VOLUP\"}, \"longpress\":{\"pressed\":\"ACTRLS_NEXT\"}}, {\"gpio\":12, \"pull\":true, \"long_press\":1000, \"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]" if MUSE
+			default "[{\"gpio\":39,\"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]" if ZEPPELIN
 			default ""
+
+
+
 		config BAT_CONFIG
 			string
 			default "channel=7,scale=20.24,atten=0" if SQUEEZEAMP
@@ -194,6 +208,10 @@ menu "Zeppelin"
 			default "0=ir" if SQUEEZEAMP
 			default "" if TWATCH2020
 			default	"36=ir" if ZEPPELIN
+		config DEFAULT_HOST_NAME
+			string
+			default	"Zeppelin" if ZEPPELIN
+			default -1
 	endmenu
 
 	menu "Audio settings"
@@ -281,7 +299,6 @@ menu "Zeppelin"
 		menu "A2DP settings"
 		    config A2DP_SINK_NAME
 		        string "Name of Bluetooth A2DP device"
-		        default "JBL Clip 3"  if ZEPPELIN
 				default ""
 		        help
 		            This is the name of the bluetooth speaker that Squeezelite will try connecting to.
@@ -320,7 +337,14 @@ menu "Zeppelin"
 		config BT_SINK_PIN
 			depends on BT_SINK
 			int "Bluetooth PIN code"
-		        default 0000
+		        default 1234
+		config BT_SINK_VOLUME
+			depends on BT_SINK
+			int "Bluetooth Start volume"
+		        default 10
+
+
+
 		config AIRPLAY_SINK
 			bool "AirPlay receiver"
 			default y
@@ -348,11 +372,10 @@ menu "Zeppelin"
 		depends on !MUSE && !ZEPPELIN
 		config AUDIO_CONTROLS
 			string "Audio buttons set (JSON)"
-			default "[{\"gpio\":39, \"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]" if ZEPPELIN
 			default ""
 			help
 				Configuration of buttons (see README for syntax)
-	endmenu	
+	endmenu
 
 	menu "Display Screen"
 		depends on !TWATCH2020
@@ -390,7 +413,7 @@ menu "Zeppelin"
 				[:0|1] means set the active value for that GPIO can be low or high
 		config ROTARY_ENCODER
 			string "Rotary Encoder configuration"
-			default ""  if ZEPPELIN
+			default "A=35,B=34,SW=39,knobonly,volume,longpress" if ZEPPELIN
 			default ""
 			help
 				Set GPIO for rotary encoder (quadrature phase). See README on SqueezeESP32 project's GitHub for more details
@@ -480,7 +503,7 @@ menu "Zeppelin"
 
 	config DEFAULT_COMMAND_LINE
         string "Default command line to execute"
-		default "squeezelite -o I2S -b 500:2000 -d all=info -C 30 -r 44100-96000 -R -n \"Zeppelin\"" if ZEPPELIN
+		default "squeezelite -o I2S -b 500:2000 -d all=info -C 30 -r 44100-96000 -R" if ZEPPELIN
         default "squeezelite -o I2S -b 500:2000 -d all=info -C 30"
         help
             This is the command to run when starting the device

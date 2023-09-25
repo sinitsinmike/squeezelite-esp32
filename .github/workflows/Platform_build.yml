@@ -103,7 +103,7 @@ jobs:
     needs: [bootstrap]
     strategy:
       matrix:
-        node: [I2S-4MFlash, SqueezeAmp, Muse]
+        node: [I2S-4MFlash, Zeppelin]
         depth: [16, 32]
         exclude:
           - node: Muse

@@ -28,7 +28,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        node: [I2S-4MFlash, SqueezeAmp, Muse]
+        node: [I2S-4MFlash, Zeppelin]
         depth: [16, 32]
         exclude:
           - node: Muse

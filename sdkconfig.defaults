@@ -185,7 +185,7 @@ CONFIG_LOGGING_DECODE="info"
 CONFIG_LOGGING_OUTPUT="info"
 # end of Logging
 
-# dodane z AMP
+
 #CONFIG_JACK_LOCKED=n
 #CONFIG_BAT_LOCKED=n
 #CONFIG_I2C_LOCKED=y
@@ -194,7 +194,8 @@ CONFIG_LOGGING_OUTPUT="info"
 #CONFIG_MUTE_GPIO_LEVEL=n
 #CONFIG_TARGET_LOCKED=n
 #
-
+CONFIG_DEFAULT_HOST_NAME="Zeppelin"
+CONFIG_HOST_NAME="Zeppelin"
 #
 # Target
 # 
@@ -203,8 +204,6 @@ CONFIG_ZEPPELIN=y
 # CONFIG_MUSE is not set
 # CONFIG_BASIC_I2C_BT is not set
 # CONFIG_TWATCH2020 is not set
-#CONFIG_RELEASE_API="https://api.github.com/repos/JacekZubielik/squeezelite-esp32/releases"
-#CONFIG_SQUEEZELITE_ESP32_RELEASE_URL="https://github.com/JacekZubielik/squeezelite-esp32/releases"
 CONFIG_PROJECT_NAME="Zeppelin"
 CONFIG_FW_PLATFORM_NAME="Zeppelin"
 #CONFIG_DAC_CONFIG="model=I2S,bck=13,ws=15,do=14"
@@ -214,7 +213,7 @@ CONFIG_FW_PLATFORM_NAME="Zeppelin"
 #CONFIG_DISPLAY_CONFIG="SPI,width=256,height=64,cs=5,reset=32,speed=8000000,driver=SSD1322,HFlip,VFlip,rotate"
 #CONFIG_ETH_CONFIG="eth_config: model=lan8720,mdc=4,mdio=2,rst=1"
 #CONFIG_DAC_CONTROLSET=""
-#CONFIG_AUDIO_CONTROLS=""
+CONFIG_AUDIO_CONTROLS="[{\"gpio\":39,\"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]"
 #CONFIG_BAT_CONFIG=""
 CONFIG_TARGET="Zeppelin"
 #CONFIG_AMP_GPIO=-1
@@ -226,7 +225,7 @@ CONFIG_TARGET="Zeppelin"
 #CONFIG_LED_RED_GPIO=-1
 #CONFIG_SET_GPIO=""
 # end of Target
-
+CONFIG_CSPOT_CONFIG="{\"deviceName\":\"Zeppelin\",\"bitrate\":320}"
 #
 # Audio settings
 #
@@ -317,8 +316,8 @@ CONFIG_TARGET="Zeppelin"
 #
 # Audio JACK
 #
-CONFIG_JACK_GPIO=""
-CONFIG_JACK_GPIO_LEVEL=""
+#CONFIG_JACK_GPIO=""
+#CONFIG_JACK_GPIO_LEVEL=""
 # end of Audio JACK
 
 #
