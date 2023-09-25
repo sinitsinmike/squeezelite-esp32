@@ -154,7 +154,7 @@ menu "Zeppelin"
 			default ""
 		config AUDIO_CONTROLS
 			string
-			default "[{\"gpio\":39,\"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]" if ZEPPELIN
+			# default "[{\"gpio\":39,\"type\":\"BUTTON_LOW\",\"pull\":true,\"long_press\":1000,\"normal\":{\"pressed\":\"ACTRLS_TOGGLE\"},\"longpress\":{\"pressed\":\"ACTRLS_POWER\"}}]" if ZEPPELIN
 			default ""
 		config DAC_CONTROLSET
 			string
