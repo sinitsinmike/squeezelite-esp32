@@ -173,7 +173,7 @@ parser_pushinstaller.add_argument(
 parser_pushinstaller.add_argument(
     '--source', type=str, help='Source directory for the installer artifacts', default=WEB_INSTALLER_DEFAULT_PATH)
 parser_pushinstaller.add_argument('--url', type=str, help='Web Installer clone url ',
-                                  default='https://github.com/sle118/squeezelite-esp32-installer.git')
+                                  default='https://github.com/JacekZubielik/squeezelite-esp32-installer.git')
 parser_pushinstaller.add_argument(
     '--web_installer_branch', type=str, help='Web Installer branch to use ', default='main')
 parser_pushinstaller.add_argument(
