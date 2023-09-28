@@ -199,7 +199,7 @@ parser_environment.add_argument(
 parser_environment.add_argument(
     '--major', type=str, help='Major version', default='2')
 parser_environment.add_argument(
-    '--docker', type=str, help='Docker image to use', default='sle118/squeezelite-esp32-idfv43')
+    '--docker', type=str, help='Docker image to use', default='gorabbit/squeezelite-esp32-idfv43')
 
 parser_show = subparsers.add_parser("show",
                                     add_help=False,
