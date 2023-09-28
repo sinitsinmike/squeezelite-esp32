@@ -6,29 +6,29 @@ extern const uint8_t _favicon_32x32_png_start[] asm("_binary_favicon_32x32_png_s
 extern const uint8_t _favicon_32x32_png_end[] asm("_binary_favicon_32x32_png_end");
 extern const uint8_t _index_html_gz_start[] asm("_binary_index_html_gz_start");
 extern const uint8_t _index_html_gz_end[] asm("_binary_index_html_gz_end");
-extern const uint8_t _index_6876dc_bundle_js_gz_start[] asm("_binary_index_6876dc_bundle_js_gz_start");
-extern const uint8_t _index_6876dc_bundle_js_gz_end[] asm("_binary_index_6876dc_bundle_js_gz_end");
-extern const uint8_t _node_vendors_6876dc_bundle_js_gz_start[] asm("_binary_node_vendors_6876dc_bundle_js_gz_start");
-extern const uint8_t _node_vendors_6876dc_bundle_js_gz_end[] asm("_binary_node_vendors_6876dc_bundle_js_gz_end");
+extern const uint8_t _index_1cd96a_bundle_js_gz_start[] asm("_binary_index_1cd96a_bundle_js_gz_start");
+extern const uint8_t _index_1cd96a_bundle_js_gz_end[] asm("_binary_index_1cd96a_bundle_js_gz_end");
+extern const uint8_t _node_vendors_1cd96a_bundle_js_gz_start[] asm("_binary_node_vendors_1cd96a_bundle_js_gz_start");
+extern const uint8_t _node_vendors_1cd96a_bundle_js_gz_end[] asm("_binary_node_vendors_1cd96a_bundle_js_gz_end");
 const char * resource_lookups[] = {
 	"/css/index.9a9aa588bee974b970cc.css.gz",
 	"/favicon-32x32.png",
 	"/index.html.gz",
-	"/js/index.6876dc.bundle.js.gz",
-	"/js/node_vendors.6876dc.bundle.js.gz",
+	"/js/index.1cd96a.bundle.js.gz",
+	"/js/node_vendors.1cd96a.bundle.js.gz",
 ""
 };
 const uint8_t * resource_map_start[] = {
 	_index_9a9aa588bee974b970cc_css_gz_start,
 	_favicon_32x32_png_start,
 	_index_html_gz_start,
-	_index_6876dc_bundle_js_gz_start,
-	_node_vendors_6876dc_bundle_js_gz_start
+	_index_1cd96a_bundle_js_gz_start,
+	_node_vendors_1cd96a_bundle_js_gz_start
 };
 const uint8_t * resource_map_end[] = {
 	_index_9a9aa588bee974b970cc_css_gz_end,
 	_favicon_32x32_png_end,
 	_index_html_gz_end,
-	_index_6876dc_bundle_js_gz_end,
-	_node_vendors_6876dc_bundle_js_gz_end
+	_index_1cd96a_bundle_js_gz_end,
+	_node_vendors_1cd96a_bundle_js_gz_end
 };
