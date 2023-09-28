@@ -64,7 +64,7 @@ jobs:
         branch_name="${branch_name//[^a-zA-Z0-9\-~!@_\.]/}"
         BUILD_NUMBER=${{ needs.job1.outputs.build_number }}
         echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_ENV
-        echo "DOCKER_IMAGE_NAME=sle118/squeezelite-esp32-idfv4-master" >> $GITHUB_ENV
+        echo "DOCKER_IMAGE_NAME=JacekZubielik/squeezelite-esp32-idfv4-master" >> $GITHUB_ENV
         tag="${TARGET_BUILD_NAME}.${{matrix.depth}}.${build_version_prefix}${BUILD_NUMBER}.${branch_name}"
         echo "tag=${tag}" >> $GITHUB_ENV
         last_commit="$(git log --pretty=format:'%s' --max-count=1)"
