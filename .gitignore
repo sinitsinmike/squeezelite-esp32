@@ -22,4 +22,4 @@ web-installer
 build-release/zeppelin-test-v001.bin
 sdkconfig
 sdkconfig.defaults
-
+pcb/
