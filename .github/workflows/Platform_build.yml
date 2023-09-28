@@ -18,7 +18,7 @@ jobs:
     name: Global setup
     runs-on: ubuntu-latest
     container:
-      image: gorabbit/squeezelite-esp32-idfv435
+      image: sle118/squeezelite-esp32-idfv435
     outputs:
       build_number: ${{ steps.buildnumber.outputs.build_number }}
       ui_build: ${{ steps.build_flags.outputs.ui_build }}
@@ -99,7 +99,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: gorabbit/squeezelite-esp32-idfv435
+      image: sle118/squeezelite-esp32-idfv435
     needs: [bootstrap]
     strategy:
       matrix:
@@ -127,7 +127,7 @@ jobs:
         . /opt/esp/python_env/idf4.3_py3.8_env/bin/activate
         git config --global --add safe.directory /__w/squeezelite-esp32/squeezelite-esp32   
         git status
-        build_tools.py environment --build ${{ needs.bootstrap.outputs.build_number }} --env_file "$GITHUB_ENV" --node "${{matrix.node}}" --depth ${{matrix.depth}} --major 2 --docker gorabbit/squeezelite-esp32-idfv435 
+        build_tools.py environment --build ${{ needs.bootstrap.outputs.build_number }} --env_file "$GITHUB_ENV" --node "${{matrix.node}}" --depth ${{matrix.depth}} --major 2 --docker sle118/squeezelite-esp32-idfv435 
         
     - uses: actions/download-artifact@master
       name: Restore common objects
