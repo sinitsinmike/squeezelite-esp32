@@ -10,7 +10,7 @@ jobs:
     name: Update Web Installer After Release
     runs-on: ubuntu-latest
     container:
-      image: gorabbit/squeezelite-esp32-idfv43
+      image: sle118/squeezelite-esp32-idfv435
     env:
       WEB_INSTALLER: ${{ secrets.WEB_INSTALLER }}
     steps:
