@@ -122,8 +122,14 @@ menu "Squeezelite-ESP32"
 			string
 			default "SPI,driver=ST7789,width=240,height=240,cs=5,back=12,speed=16000000,HFlip,VFlip" if TWATCH2020
 			default ""
+		config LED_VU_CONFIG
+			string "led_vu_config"
+			default ""
 		config ETH_CONFIG
 			string
+			default ""
+		config ROTARY_ENCODER
+			string "rotary_config"
 			default ""
 		# AGGREGATES - end		
 		config DAC_CONTROLSET
@@ -369,6 +375,11 @@ menu "Squeezelite-ESP32"
 			help
 				Set GPIO for rotary encoder (quadrature phase). See README on SqueezeESP32 project's GitHub for more details
 				A=<gpio>,B=<gpio>[,SW=gpio>[[,knobonly[=<ms>]|[,volume][,longpress]]			
+		config LED_VU_CONFIG
+			string "LED strip configuraton"
+			help
+				Set parameters for LED strip settings, leave empty for no screen
+				type=[WS2812|APA102],length=<n>,gpio=<gpio>[,clk=<gpio>]
 		config GPIO_EXP_CONFIG
 			string "GPIO expander configuration"
 			help

@@ -116,6 +116,9 @@ static struct {
 	struct arg_str * type;
 	struct arg_int * length;
 	struct arg_int * gpio;
+	struct arg_int * clk;
+	struct arg_str * seq;
+	struct arg_int * scale;
 	struct arg_lit * clear;
 	struct arg_end * end;
 } ledvu_args;
@@ -688,7 +691,7 @@ static int do_cspot_config(int argc, char **argv){
 #endif
 
 static int do_ledvu_cmd(int argc, char **argv){
-	ledvu_struct_t ledvu={  .type = "WS2812", .gpio = -1, .length = 0};
+	ledvu_struct_t ledvu={  .type = "WS2812", .gpio = -1, .length = 0, .clk = -1, .seq="", .scale = 100};
 	esp_err_t err=ESP_OK;
 	int nerrors = arg_parse(argc, argv,(void **)&ledvu_args);
 	if (ledvu_args.clear->count) {
@@ -706,19 +709,30 @@ static int do_ledvu_cmd(int argc, char **argv){
 	}
 	if(nerrors >0){
 		arg_print_errors(f,ledvu_args.end,desc_ledvu);
-		return 1;
+	}
+	else
+	{
+		if (ledvu_args.type->count > 0) {
+			strncpy(ledvu.type,ledvu_args.type->sval[0],sizeof(ledvu.type));
+			ledvu.type[sizeof(ledvu.type) - 1] = '\0';
+		}
+		else {
+			fprintf(f, "warning: LED type defaulting to WS2812\n");
+		}
+		nerrors+=is_output_gpio(ledvu_args.gpio, f, &ledvu.gpio, true);
+		nerrors+=is_output_gpio(ledvu_args.clk, f, &ledvu.clk, false);
+		if(strcasecmp(ledvu.type,"APA102") == 0 && ledvu.clk < 0 ) {
+			cmd_send_messaging(argv[0],MESSAGING_ERROR,"APA102 requires a valid Clock pin.\n");
+			nerrors++;
+		} 
+		ledvu.length = ledvu_args.length->count>0?ledvu_args.length->ival[0]:0;
+		if(ledvu.length < 1 || ledvu.length > 255) {
+			cmd_send_messaging(argv[0],MESSAGING_ERROR,"Strip length must be greater than 0 and no more than 255.\n");
+			nerrors++;
+		}
+		ledvu.scale = ledvu_args.scale->count>0?ledvu_args.scale->ival[0]:ledvu.scale;
 	}
 
-	nerrors+=is_output_gpio(ledvu_args.gpio, f, &ledvu.gpio, true);
-	
-	if(ledvu_args.length->count==0 || ledvu_args.length->ival[0]<1 || ledvu_args.length->ival[0]>255){
-		fprintf(f,"error: strip length must be greater than 0 and no more than 255\n");
-		nerrors++;
-	}
-	else {
-		ledvu.length = ledvu_args.length->count>0?ledvu_args.length->ival[0]:0;
-	}
-	
 	if(!nerrors ){
 		fprintf(f,"Storing ledvu parameters.\n");
 		nerrors+=(config_ledvu_set(&ledvu )!=ESP_OK);
@@ -948,9 +962,12 @@ cJSON * ledvu_cb(){
 	cJSON * values = cJSON_CreateObject();
 	const ledvu_struct_t *ledvu= config_ledvu_get();
 	
-	if(GPIO_IS_VALID_GPIO(ledvu->gpio) && ledvu->gpio>=0 && ledvu->length > 0){
+	if(GPIO_IS_VALID_GPIO(ledvu->gpio) && ledvu->gpio>=0 && ledvu->length > 0) {
 		cJSON_AddNumberToObject(values,"gpio",ledvu->gpio);
 		cJSON_AddNumberToObject(values,"length",ledvu->length);
+		if(GPIO_IS_VALID_GPIO(ledvu->clk) && ledvu->clk>=0) {
+			cJSON_AddNumberToObject(values,"clk",ledvu->clk);
+		}
 	}
 	if(strlen(ledvu->type)>0){
 		cJSON_AddStringToObject(values,"type",ledvu->type);
@@ -958,6 +975,7 @@ cJSON * ledvu_cb(){
 	else {
 		cJSON_AddStringToObject(values,"type","WS2812");
 	}
+	cJSON_AddNumberToObject(values,"scale",ledvu->scale);
 	return values;
 }
 
@@ -1377,9 +1395,11 @@ void register_rotary_config(void){
 }
 
 void register_ledvu_config(void){
-	ledvu_args.type = arg_str1(NULL,"type","<none>|WS2812","Led type (supports one rgb strip to display built in effects and allow remote control through 'dmx' messaging)");
+	ledvu_args.type = arg_str0(NULL,"type","WS2812|APA102","Led type (supports one rgb strip to display built in effects and allow remote control through 'dmx' messaging)");
 	ledvu_args.length = arg_int1(NULL,"length","<1..255>","Strip length (1-255 supported)");
-	ledvu_args.gpio = arg_int1(NULL,"gpio","gpio","Data pin");
+	ledvu_args.gpio = arg_int1(NULL,"gpio","<n>","Data pin");
+	ledvu_args.clk = arg_int0(NULL,"clk","<n>","Clock pin (APA102 only)");
+	ledvu_args.scale = arg_int0(NULL,"scale","<n>","Gain scale (precent)");
 	ledvu_args.clear = arg_lit0(NULL, "clear", "Clear configuration");
 	ledvu_args.end = arg_end(4);
 

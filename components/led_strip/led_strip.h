@@ -2,7 +2,9 @@
     File: led_strip.h
     Author(s):  Lucas Bruder <LBruder@me.com>
     Date Created: 11/23/2016
-    Last modified: 11/26/2016
+    Last modified: 09/24/2023
+
+    Updated:  Wizmo - ad support for APA102 
 
     Description: 
     This library can drive led strips through the RMT module on the ESP32.
@@ -24,7 +26,7 @@ enum rgb_led_type_t {
     RGB_LED_TYPE_WS2812 = 0,
     RGB_LED_TYPE_SK6812 = 1,
     RGB_LED_TYPE_APA106 = 2,
-
+    RGB_LED_TYPE_APA102 = 3,
     RGB_LED_TYPE_MAX,
 };
 
@@ -37,6 +39,8 @@ struct led_color_t {
     uint8_t blue;
 };
 
+#define LED_STRIP_SEQ_MAX_SIZE 10
+
 struct led_strip_t {
     enum rgb_led_type_t rgb_led_type; // should be const, but workaround needed for initialization
     uint32_t led_strip_length;
@@ -45,6 +49,8 @@ struct led_strip_t {
     rmt_channel_t rmt_channel;
     
     gpio_num_t gpio; // Must be less than GPIO_NUM_33
+    gpio_num_t clk; // APA102 only 
+    uint8_t seq[LED_STRIP_SEQ_MAX_SIZE]; // APA102 only
 
     struct led_color_t *led_strip_working;
     struct led_color_t *led_strip_showing;
