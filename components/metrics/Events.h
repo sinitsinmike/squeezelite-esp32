@@ -45,7 +45,7 @@ class Event {
     }
   private:
     char* _name = nullptr;
-    time_t _time;
+    uint32_t _time;
     cJSON* _json = nullptr;    
 };
 

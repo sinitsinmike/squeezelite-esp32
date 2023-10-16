@@ -31,7 +31,7 @@ extern bool is_network_connected();
 #define MAX_HTTP_RECV_BUFFER 512
 
 static bool metrics_usage_gen = false;
-static time_t metrics_usage_gen_time = 0;
+static uint32_t metrics_usage_gen_time = 0;
 #ifndef METRICS_API_KEY
     #pragma message "Metrics API key needs to be passed from the environment"
     #define METRICS_API_KEY "ZZZ"
@@ -56,7 +56,7 @@ static void metrics_timer_cb(void* timer_id) {
             batch.push();
         }
     }
-    if (millis() > metrics_usage_gen_time && !metrics_usage_gen) {
+    if (gettime_ms() > metrics_usage_gen_time && !metrics_usage_gen) {
         metrics_usage_gen = true;
         ESP_LOGV(TAG, "Generate command list to pull features");
         cJSON* cmdlist = get_cmd_list();
@@ -75,7 +75,7 @@ void metrics_init() {
     }
     // set a 20 seconds delay before generating the
     // features so the system has time to boot
-    metrics_usage_gen_time = millis() + 20000;
+    metrics_usage_gen_time = gettime_ms() + 20000;
 }
 
 void metrics_event_playback(const char* source) {

@@ -77,7 +77,7 @@ void Batch::push() {
 
     char* json_str = to_json_str();
     ESP_LOGV(TAG, "Metrics payload: %s", json_str);
-    time_t start_time = millis();
+    uint32_t start_time = gettime_ms();
 
     status_code = metrics_http_post_request(json_str, _url);
 
@@ -85,7 +85,7 @@ void Batch::push() {
         _events.clear();
     }
     FREE_AND_NULL(json_str)
-    ESP_LOGD(TAG, "Total duration for metrics call: %lu. ", millis() - start_time);
+    ESP_LOGD(TAG, "Total duration for metrics call: %lu. ", gettime_ms() - start_time);
 }
 
 void Batch::build_guid() {

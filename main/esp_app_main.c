@@ -233,8 +233,8 @@ void register_default_string_val(const char * key, const char * value){
 	char * existing =(char *)config_alloc_get(NVS_TYPE_STR,key );
 	ESP_LOGD(TAG,"Register default called with:  %s= %s",key,value );
 	if(!existing) {
-		ESP_LOGI(TAG,"Registering default value for key %s, value %s",key,value );
-		config_set_default(NVS_TYPE_STR, key,value, 0);
+		ESP_LOGI(TAG,"Registering default value for key %s, value %s", key, value );
+		config_set_default(NVS_TYPE_STR, key, value, 0);
 	}
 	else {
 		ESP_LOGD(TAG,"Value found for %s: %s",key,existing );
