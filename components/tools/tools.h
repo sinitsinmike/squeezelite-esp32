@@ -9,10 +9,9 @@
  */
  
 #pragma once
-#include "cJSON.h"
-#include "time.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "cJSON.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +55,13 @@ void* 		clone_obj_psram(void * source, size_t source_sz);
 char* 		strdup_psram(const char * source);
 const char* str_or_unknown(const char * str);
 const char* str_or_null(const char * str);
+void        dump_json_content(const char* prefix, cJSON* json, int level);
+
+#ifndef gettime_ms
+// body is provided somewhere else...
+uint32_t _gettime_ms_(void);
+#define gettime_ms _gettime_ms_
+#endif
 
 typedef void (*http_download_cb_t)(uint8_t* data, size_t len, void *context);
 void		http_download(char *url, size_t max, http_download_cb_t callback, void *context);
@@ -73,9 +79,6 @@ BaseType_t xTaskCreateEXTRAM( TaskFunction_t pvTaskCode,
 void vTaskDeleteEXTRAM(TaskHandle_t xTask);                            
 
 extern const char unknown_string_placeholder[];
-
-time_t millis();
-void dump_json_content(const char* prefix, cJSON* json, int level);
 
 #ifdef __cplusplus
 }

@@ -538,7 +538,7 @@ bool config_set_group_bit(int bit_num,bool flag){
 	return result;
 }
 
-void config_set_default(nvs_type_t type, const char *key, void * default_value, size_t blob_size) {
+void config_set_default(nvs_type_t type, const char *key, const void * default_value, size_t blob_size) {
 	if(!config_lock(LOCK_MAX_WAIT/portTICK_PERIOD_MS)){
 		ESP_LOGE(TAG, "Unable to lock config");
 		return;
@@ -791,43 +791,6 @@ cJSON* cjson_update_number(cJSON** root, const char* key, int value) {
 	}
     return *root;
 }
-bool config_parse_param_int(const char * config,const char * param, char delimiter,int * value){
-	const char *p;
-	if(!value){
-		return false;
-	}	
-	if ((p = strcasestr(config, param)) && (p = strchr(p, delimiter))) {
-		*value = atoi(p+1);
-		return true;
-	}
-	return false;
-}
-bool config_parse_param_float(const char * config,const char * param, char delimiter,double * value){
-	const  char *p;
-	if(!value){
-		return false;
-	}	
-	if ((p = strcasestr(config, param)) && (p = strchr(p, delimiter))) {
-		*value = atof(p+1);
-		return true;
-	}
-	return false;
-}
-bool config_parse_param_str(const char *source, const char *param, char delimiter, char *value, size_t value_size) {
-    char *p;
-    if ((p = strstr(source, param)) && (p = strchr(p, delimiter))) {
-        while (*++p == ' ');  // Skip spaces
-        // Read the value into the buffer, making sure not to overflow
-        snprintf(value, value_size, "%s", p);
-        char *end = strchr(value, ',');
-        if (end) {
-            *end = '\0';  // Null-terminate at the comma, if found
-        }
-        return true;
-    }
-    return false;
-}
-												
 
 IMPLEMENT_SET_DEFAULT(uint8_t,NVS_TYPE_U8);
 IMPLEMENT_SET_DEFAULT(int8_t,NVS_TYPE_I8);

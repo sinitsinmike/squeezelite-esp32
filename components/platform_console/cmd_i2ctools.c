@@ -61,11 +61,13 @@ static struct {
     struct arg_end* end;
 } i2cset_args;
 
+#if CONFIG_WITH_CONFIG_UI
 static struct {
     struct arg_int* chip_address;
     struct arg_int* size;
     struct arg_end* end;
 } i2cdump_args;
+#endif    
 
 static struct {
     struct arg_int* port;
@@ -559,13 +561,14 @@ static int do_i2cconfig_cmd(int argc, char** argv) {
 
     nerrors += is_output_gpio(i2cconfig_args.sda, f, &conf.sda_io_num, true);
     nerrors += is_output_gpio(i2cconfig_args.scl, f, &conf.scl_io_num, true);
-
-#ifdef CONFIG_SQUEEZEAMP
+    
+#ifdef CONFIG_I2C_LOCKED
     if (i2c_port == I2C_NUM_0) {
         i2c_port = I2C_NUM_1;
-        fprintf(f, "can't use i2c port 0 on SqueezeAMP. Changing to port 1.\n");
+        fprintf(f, "can't use i2c port 0 when locked by config. Changing to port 1.\n");
     }
 #endif
+
     if (!nerrors) {
         fprintf(f, "Uninstalling i2c driver from port %u if needed\n", i2c_port);
         if (is_i2c_started(i2c_port)) {
@@ -601,6 +604,7 @@ static int do_i2cconfig_cmd(int argc, char** argv) {
     return nerrors;
 }
 
+#if CONFIG_WITH_CONFIG_UI
 static int do_i2cdump_cmd(int argc, char** argv) {
     int nerrors = arg_parse_msg(argc, argv, (struct arg_hdr**)&i2cdump_args);
     if (nerrors != 0) {
@@ -690,7 +694,7 @@ static int do_i2cdump_cmd(int argc, char** argv) {
     FREE_AND_NULL(buf);
     return 0;
 }
-#if CONFIG_WITH_CONFIG_UI
+
 static int do_i2cset_cmd(int argc, char** argv) {
     int nerrors = arg_parse_msg(argc, argv, (struct arg_hdr**)&i2cset_args);
     if (nerrors != 0) {
@@ -738,6 +742,7 @@ static int do_i2cset_cmd(int argc, char** argv) {
     return 0;
 }
 #endif
+
 static int do_i2cget_cmd(int argc, char** argv) {
     int nerrors = arg_parse_msg(argc, argv, (struct arg_hdr**)&i2cget_args);
     if (nerrors != 0) {
@@ -811,7 +816,9 @@ static int do_i2cget_cmd(int argc, char** argv) {
     return 0;
 }
 esp_err_t cmd_i2ctools_scan_bus(FILE* f, int sda, int scl) {
+#ifdef CONFIG_WITH_CONFIG_UI    
     uint8_t matches[128] = {};
+#endif    
     int last_match = 0;
     esp_err_t ret = ESP_OK;
 
@@ -861,8 +868,9 @@ esp_err_t cmd_i2ctools_scan_bus(FILE* f, int sda, int scl) {
         if (ret == ESP_OK) {
 #ifndef CONFIG_WITH_CONFIG_UI
             fprintf(f, "%02x ", i);
-#endif
+#else            
             matches[++last_match - 1] = i;
+#endif            
         }
 #ifndef CONFIG_WITH_CONFIG_UI
         else if (ret == ESP_ERR_TIMEOUT) {
@@ -888,8 +896,10 @@ esp_err_t cmd_i2ctools_scan_bus(FILE* f, int sda, int scl) {
     return 0;
 }
 static int do_i2cdetect_cmd(int argc, char** argv) {
+#ifdef CONFIG_WITH_CONFIG_UI
     uint8_t matches[128] = {};
     int last_match = 0;
+#endif
     esp_err_t ret = ESP_OK;
     i2c_port_t loc_i2c_port = i2c_port;
     // if (i2cset_args.port->count && i2c_get_port(i2cset_args.port->ival[0], &loc_i2c_port) !=
@@ -925,7 +935,9 @@ static int do_i2cdetect_cmd(int argc, char** argv) {
                 i2c_cmd_link_delete(cmd);
                 if (ret == ESP_OK) {
                     fprintf(f, "%02x ", address);
+#ifdef CONFIG_WITH_CONFIG_UI                    
                     matches[++last_match - 1] = address;
+#endif
                 } else if (ret == ESP_ERR_TIMEOUT) {
                     fprintf(f, "UU ");
                 } else {
@@ -1082,7 +1094,7 @@ static void register_i2cset(void) {
     cmd_to_json(&i2cset_cmd);
     ESP_ERROR_CHECK(esp_console_cmd_register(&i2cset_cmd));
 }
-#endif
+
 static void register_i2cdump(void) {
     i2cdump_args.chip_address =
         arg_int1("c", "chip", "<chip_addr>", "Specify the address of the chip on that bus");
@@ -1096,6 +1108,7 @@ static void register_i2cdump(void) {
     cmd_to_json(&i2cdump_cmd);
     ESP_ERROR_CHECK(esp_console_cmd_register(&i2cdump_cmd));
 }
+#endif
 
 cJSON* i2config_cb() {
     cJSON* values = cJSON_CreateObject();
