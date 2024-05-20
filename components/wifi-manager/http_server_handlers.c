@@ -32,7 +32,6 @@ Copyright (c) 2017-2021 Sebastien L
 
 esp_err_t request_auth(httpd_req_t *req);
 static const char auth_header[] = "Authorization";
-static const char auth_password[] = "squeezeLite"; 	// TODO: get this from config
 static const int BASIC_INDEX = 6;
 
 #define HTTP_STACK_SIZE	(5*1024)
@@ -223,63 +222,65 @@ session_context_t* get_session_context(httpd_req_t *req){
 }
 
 bool is_user_authenticated(httpd_req_t *req){
+	char *auth_password = config_alloc_get_str("http_password", NULL, NULL);
+
 	// Only do auth if it's configured
 	if (auth_password == NULL) {
 		return true;
 	}
 
-	session_context_t *ctx_data = get_session_context(req);
+	if (strlen(auth_password) > 0) {
+		session_context_t *ctx_data = get_session_context(req);
 
-	// Did we already authenticate?
-	if(ctx_data->authenticated){
-		ESP_LOGD_LOC(TAG,"User is authenticated.");
-		return true;
-	}
+		// Did we already authenticate?
+		if(ctx_data->authenticated){
+			ESP_LOGD_LOC(TAG,"User is authenticated.");
+			return true;
+		}
 
-	// See if we have an auth header to work with
-	// Header will be formatted 'Basic base64(user:pass)' for basic auth
-	size_t header_len = httpd_req_get_hdr_value_len(req, auth_header);
-	if (header_len > 7) {
-		char *val = calloc(header_len+1,1); // NULL Terminator
-		if (val == NULL) {
-			return false;//ESP_ERR_NOMEM;
-		} else {
-			esp_err_t error = httpd_req_get_hdr_value_str(req, auth_header, val, header_len+1);
-			if (ESP_OK == error) {
-				ESP_LOGD(TAG, "Auth header: %s:", val);
-				int base64_err = 0;
-				size_t out_size = 0;
+		// See if we have an auth header to work with
+		// Header will be formatted 'Basic base64(user:pass)' for basic auth
+		size_t header_len = httpd_req_get_hdr_value_len(req, auth_header);
+		if (header_len > 7) {
+			char *val = calloc(header_len+1,1); // NULL Terminator
+			if (val) {
+				esp_err_t error = httpd_req_get_hdr_value_str(req, auth_header, val, header_len+1);
+				if (ESP_OK == error) {
+					ESP_LOGD(TAG, "Auth header: %s:", val);
+					int base64_err = 0;
+					size_t out_size = 0;
 
-				// Get required size of buffer
-				mbedtls_base64_decode(NULL, 0, &out_size, 
-					(unsigned char *)val+BASIC_INDEX, header_len-BASIC_INDEX);
-				
-				unsigned int bytes_written = 0;
-				char *user_pass = calloc(out_size+1,1);	// NULL Terminator
-				if (user_pass != NULL) {
-					// Decode and parse
-					base64_err = mbedtls_base64_decode(
-						(unsigned char *)user_pass, out_size+1, &bytes_written, 
+					// Get required size of buffer
+					mbedtls_base64_decode(NULL, 0, &out_size, 
 						(unsigned char *)val+BASIC_INDEX, header_len-BASIC_INDEX);
-					if (base64_err == 0) {
-						char *user = strsep(&user_pass, ":");
-						char *pass = strsep(&user_pass, ":");
-				
-						ESP_LOGI(TAG, "Creds: %s:%s. Expecting: %s", user, pass, auth_password);
-						if (0 == strcmp(auth_password, pass)) {
-							ctx_data->authenticated = true;
+					
+					unsigned int bytes_written = 0;
+					char *user_pass = calloc(out_size+1,1);	// NULL Terminator
+					if (user_pass != NULL) {
+						// Decode and parse
+						base64_err = mbedtls_base64_decode(
+							(unsigned char *)user_pass, out_size+1, &bytes_written, 
+							(unsigned char *)val+BASIC_INDEX, header_len-BASIC_INDEX);
+						if (base64_err == 0) {
+							/*char *user = */ strsep(&user_pass, ":");
+							char *pass = strsep(&user_pass, ":");
+
+							if (pass != NULL && 0 == strcmp(auth_password, pass)) {
+								ctx_data->authenticated = true;
+							}
+						} else {
+							ESP_LOGE(TAG, "Failed base64 decoding, size: %i, error: %i:", out_size, base64_err);
 						}
-					} else {
-						ESP_LOGE(TAG, "Failed base64 decoding, size: %i, error: %i:", out_size, base64_err);
+						FREE_AND_NULL(user_pass);
 					}
-					FREE_AND_NULL(user_pass);
+				} else {
+					ESP_LOGE(TAG,"Failed to get header value, error: %i", error);
 				}
-			} else {
-				ESP_LOGE(TAG,"Failed to get header value, error: %i", error);
+				FREE_AND_NULL(val);
 			}
-			FREE_AND_NULL(val);
 		}
 	}
+	FREE_AND_NULL(auth_password);
 
 	ESP_LOGD(TAG, "Heap internal:%zu (min:%zu) external:%zu (min:%zu) dma:%zu (min:%zu)",
 			heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
