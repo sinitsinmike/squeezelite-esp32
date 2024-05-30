@@ -687,6 +687,7 @@ void draw_VU(struct GDS_Device * display, int level, int x, int y, int width, bo
 static void grfe_handler( u8_t *data, int len) {
 	struct grfe_packet *pkt = (struct grfe_packet*) data;		
 	
+	GDS_CHECK_FOR_DEVICE(display,return);	
 	// we don't support transition, simply claim we're done
 	if (pkt->transition != 'c') {
 		LOG_INFO("Transition %c requested with offset %hu, param %d", pkt->transition, pkt->offset, pkt->param);
@@ -773,7 +774,8 @@ static void grfs_handler(u8_t *data, int len) {
 				htons(pkt->width),		// last column of animation that contains a "full" screen
 				htons(pkt->offset)		// offset if multiple packets are sent
 	);
-	
+
+	GDS_CHECK_FOR_DEVICE(display,return);	
 	// new grfs frame, build scroller info
 	if (!offset) {	
 		// use the display as a general lock
@@ -820,6 +822,7 @@ static void grfg_handler(u8_t *data, int len) {
 	
 	LOG_DEBUG("gfrg s:%hu w:%hu (len:%u)", htons(pkt->screen), htons(pkt->width), len);
 
+	GDS_CHECK_FOR_DEVICE(display,return);	
 	// full screen artwork or for small screen, visu has priority when full screen	
 	if (((visu.mode & VISU_ESP32) && !visu.col && visu.row < displayer.height) || artwork.full) {
 		return;
@@ -864,6 +867,7 @@ static void grfa_handler(u8_t *data, int len) {
 	int offset = htonl(pkt->offset);
 	int length = htonl(pkt->length);
 
+	GDS_CHECK_FOR_DEVICE(display,return);	
 	// when using full screen visualizer on small screen there is a brief overlay	
 	artwork.enable = (length != 0);
 	
