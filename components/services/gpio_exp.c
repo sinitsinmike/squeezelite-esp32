@@ -83,6 +83,10 @@ static void      mcp23s17_set_direction(gpio_exp_t* self);
 static uint32_t  mcp23s17_read(gpio_exp_t* self);
 static void      mcp23s17_write(gpio_exp_t* self);
 
+static void 	aw9523_set_direction(gpio_exp_t* self);
+static uint32_t aw9523_read(gpio_exp_t* self);
+static void 	aw9523_write(gpio_exp_t* self);
+
 static void   service_handler(void *arg);
 static void   debounce_handler( TimerHandle_t xTimer );
 
@@ -130,6 +134,11 @@ static const struct gpio_exp_model_s {
 	  .set_pull_mode = mcp23s17_set_pull_mode,
 	  .read = mcp23s17_read,
 	  .write = mcp23s17_write, },
+	{ .model = "aw9523",
+	  .trigger = GPIO_INTR_LOW_LEVEL,
+	  .set_direction = aw9523_set_direction,
+	  .read = aw9523_read,
+	  .write = aw9523_write, },
 };
 
 static EXT_RAM_ATTR uint8_t n_expanders;
@@ -669,6 +678,22 @@ static uint32_t mcp23s17_read(gpio_exp_t* self) {
 
 static void mcp23s17_write(gpio_exp_t* self) {
 	spi_write(self->spi_handle, self->phy.addr, 0x12, self->shadow, 2);
+}
+
+/****************************************************************************************
+ * AW9523 family : direction, read and write
+ */
+static void aw9523_set_direction(gpio_exp_t* self) {
+	i2c_write(self->phy.port, self->phy.addr, 0x04, self->r_mask, 2);
+	i2c_write(self->phy.port, self->phy.addr, 0x06, ~self->r_mask, 2);
+}
+
+static uint32_t aw9523_read(gpio_exp_t* self) {
+	return i2c_read(self->phy.port, self->phy.addr, 0x00, 2);
+}
+
+static void aw9523_write(gpio_exp_t* self) {
+	i2c_write(self->phy.port, self->phy.addr, 0x02, self->shadow, 2);
 }
 
 /***************************************************************************************
