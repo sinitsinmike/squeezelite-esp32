@@ -689,7 +689,9 @@ static void aw9523_set_direction(gpio_exp_t* self) {
 }
 
 static uint32_t aw9523_read(gpio_exp_t* self) {
-	return i2c_read(self->phy.port, self->phy.addr, 0x00, 2);
+	// Reading both registers in one go does not seem to reset IRQ correctly
+	uint8_t port1 = i2c_read(self->phy.port, self->phy.addr, 0x00, 1);
+	return (i2c_read(self->phy.port, self->phy.addr, 0x01, 1) << 8) | port1;
 }
 
 static void aw9523_write(gpio_exp_t* self) {
