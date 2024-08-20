@@ -62,6 +62,7 @@ static void register_free();
 static void register_setdevicename();
 static void register_heap();
 static void register_dump_heap();
+static void register_abort();
 static void register_version();
 static void register_restart();
 #if CONFIG_WITH_CONFIG_UI
@@ -90,6 +91,7 @@ void register_system()
     register_free();
     register_heap();
     register_dump_heap();
+    register_abort();
     register_version();
     register_restart();
     register_factory_boot();
@@ -139,6 +141,27 @@ static void register_version()
         .help = "Get version of chip and SDK",
         .hint = NULL,
         .func = &get_version,
+    };
+    cmd_to_json(&cmd);
+    ESP_ERROR_CHECK( esp_console_cmd_register(&cmd) );
+}
+
+/* 'abort' command */
+static int cmd_abort(int argc, char **argv)
+{
+    cmd_send_messaging(argv[0],MESSAGING_INFO,"ABORT!\r\n");
+    
+    abort();
+    return 0;
+}
+
+static void register_abort()
+{
+    const esp_console_cmd_t cmd = {
+        .command = "abort",
+        .help = "Crash now!",
+        .hint = NULL,
+        .func = &cmd_abort,
     };
     cmd_to_json(&cmd);
     ESP_ERROR_CHECK( esp_console_cmd_register(&cmd) );
