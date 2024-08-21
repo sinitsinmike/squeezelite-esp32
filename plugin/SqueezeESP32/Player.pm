@@ -220,7 +220,8 @@ sub send_equalizer {
 sub send_loudness {
 	my ($client, $loudness) = @_;
    
-    $loudness ||= $prefs->client($client)->get('loudness') || 0;
+    $loudness = defined $loudness ? $loudness : $prefs->client($client)->get('loudness');
+
 	my $data = pack("c1", $loudness);
 	$client->sendFrame( loud => \$data );   
 }
