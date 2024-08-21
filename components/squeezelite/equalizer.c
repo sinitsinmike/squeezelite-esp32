@@ -159,8 +159,7 @@ void equalizer_set_gain(int8_t *gain) {
 	config[n-1] = '\0';
 	config_set_value(NVS_TYPE_STR, "equalizer", config);
     
-    // update only if something changed
-    if (!memcmp(equalizer.gain, gain, EQ_BANDS)) equalizer.update = true;
+    equalizer.update = true;
 
     LOG_INFO("equalizer gain %s", config);
 #else
