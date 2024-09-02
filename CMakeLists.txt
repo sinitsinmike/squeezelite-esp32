@@ -73,7 +73,7 @@ set_target_properties(recovery.elf PROPERTIES LINK_LIBRARIES "${BCA};idf::app_re
 # build squeezelite, add app_squeezelite to the link
 add_executable(squeezelite.elf "CMakeLists.txt")
 add_dependencies(squeezelite.elf recovery.elf)
-set_target_properties(squeezelite.elf PROPERTIES LINK_LIBRARIES "${BCA};idf::app_squeezelite;-Wl,--Map=${BUILD_DIR}/squeezelite.map")
+set_target_properties(squeezelite.elf PROPERTIES LINK_LIBRARIES "${BCA};idf::app_squeezelite;-Wl,--Map=${BUILD_DIR}/squeezelite.map,--wrap=esp_panic_handler")
 add_custom_command(
 			TARGET squeezelite.elf
 			POST_BUILD 
