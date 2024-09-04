@@ -22,7 +22,8 @@ static EXT_RAM_ATTR struct {
 	void *handle;
     float loudness, volume;
     uint32_t samplerate;
-	float gain[EQ_BANDS], loudness_gain[EQ_BANDS];
+	int8_t gain[EQ_BANDS];
+	float loudness_gain[EQ_BANDS];
 	bool update;
 } equalizer;
 
@@ -151,6 +152,8 @@ void equalizer_set_gain(int8_t *gain) {
     char config[EQ_BANDS * 4 + 1] = { };
 	int n = 0;
     
+    if (memcmp(equalizer.gain, gain, EQ_BANDS) != 0) equalizer.update = true;
+    
     for (int i = 0; i < EQ_BANDS; i++) {
 		equalizer.gain[i] = gain[i];
 		n += sprintf(config + n, "%d,", gain[i]);
@@ -159,8 +162,6 @@ void equalizer_set_gain(int8_t *gain) {
 	config[n-1] = '\0';
 	config_set_value(NVS_TYPE_STR, "equalizer", config);
     
-    equalizer.update = true;
-
     LOG_INFO("equalizer gain %s", config);
 #else
     LOG_INFO("no equalizer with 32 bits samples");
