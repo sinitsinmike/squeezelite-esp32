@@ -148,18 +148,28 @@ void equalizer_set_volume(unsigned left, unsigned right) {
  */
 void equalizer_set_gain(int8_t *gain) {
 #if BYTES_PER_FRAME == 4
+    static uint8_t last_gain[EQ_BANDS] = { };
+    bool eq_update = false;
+
     char config[EQ_BANDS * 4 + 1] = { };
 	int n = 0;
     
     for (int i = 0; i < EQ_BANDS; i++) {
 		equalizer.gain[i] = gain[i];
 		n += sprintf(config + n, "%d,", gain[i]);
+		
+		if (gain[i] != last_gain[i])
+		{
+            eq_update = true;
+		}
+		last_gain[i] = gain[i];
 	}
 
 	config[n-1] = '\0';
 	config_set_value(NVS_TYPE_STR, "equalizer", config);
     
-    equalizer.update = true;
+    //"or" in this value in case equalizer.update is set for another reason
+    equalizer.update |= eq_update;
 
     LOG_INFO("equalizer gain %s", config);
 #else
