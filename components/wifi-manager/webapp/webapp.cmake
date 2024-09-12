@@ -1,5 +1,5 @@
 target_add_binary_data( __idf_wifi-manager webapp/dist/css/index.6d425ac534311a0131b2.css.gz BINARY)
 target_add_binary_data( __idf_wifi-manager webapp/dist/favicon-32x32.png BINARY)
 target_add_binary_data( __idf_wifi-manager webapp/dist/index.html.gz BINARY)
-target_add_binary_data( __idf_wifi-manager webapp/dist/js/index.ca2484.bundle.js.gz BINARY)
-target_add_binary_data( __idf_wifi-manager webapp/dist/js/node_vendors.ca2484.bundle.js.gz BINARY)
+target_add_binary_data( __idf_wifi-manager webapp/dist/js/index.95ad03.bundle.js.gz BINARY)
+target_add_binary_data( __idf_wifi-manager webapp/dist/js/node_vendors.95ad03.bundle.js.gz BINARY)
