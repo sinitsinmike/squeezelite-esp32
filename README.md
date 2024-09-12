@@ -308,7 +308,7 @@ The parameter "gpio_exp_config" is a semicolon (;) separated list with following
 ```
 model=<model>,addr=<addr>,[,port=system|dac][,base=<n>][,count=<n>][,intr=<gpio>][,cs=<gpio>][,speed=<Hz>]
 ```	
-- model: pca9535, pca85xx, mcp23017 and mcp23s17 (SPI version)
+- model: pca9535, pca85xx, mcp23017, aw9523 and mcp23s17 (SPI version)
 - addr: chip i2c/spi address (decimal)
 - port (I2C): use either "system" port (shared with display for example) or "dac" port (system is default)
 - cs (SPI): gpio used for Chip Select
