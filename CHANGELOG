@@ -1,3 +1,9 @@
+2024-09-12
+- Fix for I2S noise burst when ESP32 panic occurs (# 437)
+
+2024-09-10
+- Merge pull request # 439 from digidocs/eq_update_fix2 (# 309)
+
 2024-05-05
  - Fix crash when led_vu is configured without display
 2024-01-27
