@@ -222,6 +222,25 @@ static void set_i2s_pin(char *config, i2s_pin_config_t *pin_config) {
 #endif    
 }
 
+/* When a panic occurs during playback, the I2S interface can produce a loud noise burst.
+ * This code runs just before the system panic handler to "emergency stop" the I2S iterface
+ * to prevent the noise burst from happening.  Note that when this code is called the system
+ * has already crashed, so no need to disable interrupts, acquire locks, or otherwise be nice.
+ *
+ * This code makes use of the linker --wrap feature to intercept the call to esp_panic_handler.
+ */
+
+void __real_esp_panic_handler(void*);
+
+void __wrap_esp_panic_handler (void* info) {
+    esp_rom_printf("I2S abort!\r\n");
+    
+    i2s_stop(CONFIG_I2S_NUM);
+    
+    /* Call the original panic handler function to finish processing this error */
+    __real_esp_panic_handler(info);
+}
+
 /****************************************************************************************
  * Initialize the DAC output
  */

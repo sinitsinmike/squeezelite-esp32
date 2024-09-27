@@ -705,26 +705,6 @@ esp_err_t i2s_stop(i2s_port_t i2s_num)
     return ESP_OK;
 }
 
-/* 
- * When a panic occurs during playback, the I2S interface can produce a loud noise burst.
- * This code runs just before the system panic handler to "emergency stop" the I2S iterface
- * to prevent the noise burst from happening.  Note that when this code is called the system
- * has already crashed, so no need to disable interrupts, acquire locks, or otherwise be nice.
- *
- * This code makes use of the linker --wrap feature to intercept the call to esp_panic_handler.
- */
-
-void __real_esp_panic_handler(void*);
-
-void __wrap_esp_panic_handler (void* info) {
-    esp_rom_printf("I2S abort!\r\n");
-    
-    i2s_hal_stop_tx(&(p_i2s_obj[CONFIG_I2S_NUM]->hal));
-    
-    /* Call the original panic handler function to finish processing this error */
-    __real_esp_panic_handler(info);
-}
-
 #if SOC_I2S_SUPPORTS_ADC_DAC
 esp_err_t i2s_set_dac_mode(i2s_dac_mode_t dac_mode)
 {
