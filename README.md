@@ -634,7 +634,7 @@ The above command will mount this repo into the docker container and start a bas
 ### Manual Install of ESP-IDF
 You can install IDF manually on Linux or Windows (using the Subsystem for Linux) following the instructions at: https://www.instructables.com/id/ESP32-Development-on-Windows-Subsystem-for-Linux/ or see here https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/windows-setup.html for a direct install. You also need a few extra Python libraries for cspot by adding `[sudo] pip3 install protobuf grpcio-tools`
 
-**Use the esp-idf 4.3.5 https://github.com/espressif/esp-idf/tree/release/v4.3.5 ** or the 4.4.5 (and above version) if you want to build for esp32-s3. You should download the a zip of the whole github tree (at the version you need) and runthe installer (`install.bat [esp32[,esp32s3]]` from there. Some Windows version (at least) have now a SSL certificate issue. You can workaround this by editing idf-tools.py and adding the following under ìmport ssl`
+**Use the esp-idf 4.3.5 https://github.com/espressif/esp-idf/tree/release/v4.3.5 ** or the 4.4.5 (and above version) if you want to build for esp32-s3. You should clone recursively the whole branch (at the version you need) and run the installer (`install.bat [esp32[,esp32s3]]` from there. Some Windows version (at least) have now a SSL certificate issue. You can workaround this by editing idf-tools.py and adding the following under ìmport ssl`
 ```
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
