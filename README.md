@@ -632,10 +632,13 @@ docker run -it -v `pwd`:/workspace/squeezelite-esp32 sle118/squeezelite-esp32-id
 The above command will mount this repo into the docker container and start a bash terminal. From there, simply run idf.py build to build, etc. Note that at the time of writing these lines, flashing is not possible for docker running under windows https://github.com/docker/for-win/issues/1018.
 
 ### Manual Install of ESP-IDF
-You can install IDF manually on Linux or Windows (using the Subsystem for Linux) following the instructions at: https://www.instructables.com/id/ESP32-Development-on-Windows-Subsystem-for-Linux/ or see here https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/windows-setup.html for a direct install. You also need a few extra Python libraries for cspot by addingsudo `pip3 install protobuf grpcio-tools`
+You can install IDF manually on Linux or Windows (using the Subsystem for Linux) following the instructions at: https://www.instructables.com/id/ESP32-Development-on-Windows-Subsystem-for-Linux/ or see here https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/windows-setup.html for a direct install. You also need a few extra Python libraries for cspot by adding `[sudo] pip3 install protobuf grpcio-tools`
 
-**Use the esp-idf 4.3.5 https://github.com/espressif/esp-idf/tree/release/v4.3.5 ** or the 4.4.5 (and above version) if you want to build for esp32-s3
-
+**Use the esp-idf 4.3.5 https://github.com/espressif/esp-idf/tree/release/v4.3.5 ** or the 4.4.5 (and above version) if you want to build for esp32-s3. You should download the a zip of the whole github tree (at the version you need) and runthe installer (`install.bat [esp32[,esp32s3]]` from there. Some Windows version (at least) have now a SSL certificate issue. You can workaround this by editing idf-tools.py and adding the following under ìmport ssl`
+```
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+```
 ## Building SqueezeESP32
 When initially cloning the repo, make sure you do it recursively. For example: `git clone --recursive https://github.com/sle118/squeezelite-esp32.git`. You also should install cspot additional components for protobuf use.
 ```
