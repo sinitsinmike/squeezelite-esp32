@@ -639,6 +639,7 @@ You can install IDF manually on Linux or Windows (using the Subsystem for Linux)
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 ```
+And because the fun never ends, some Windows installation might fail to build a few file and spit a tons of errors on the output. It seems that the cache of the compile is a problem, so try to disable it by running `idf.py --no-ccache build` (I know...)
 ## Building SqueezeESP32
 When initially cloning the repo, make sure you do it recursively. For example: `git clone --recursive https://github.com/sle118/squeezelite-esp32.git`. You also should install cspot additional components for protobuf use.
 ```
