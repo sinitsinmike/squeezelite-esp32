@@ -114,6 +114,7 @@ const DefaultStringVal defaultStringVals[] = {
     {"dhcp_tmout", "8"},
     {"target", CONFIG_TARGET},
     {"led_vu_config", ""},
+	{"autoexec", "1"},	
 #ifdef CONFIG_BT_SINK
     {"bt_sink_pin", STR(CONFIG_BT_SINK_PIN)},
     {"bt_sink_volume", "127"},
@@ -123,7 +124,6 @@ const DefaultStringVal defaultStringVals[] = {
     {"a2dp_ctmt", STR(CONFIG_A2DP_CONNECT_TIMEOUT_MS)},
     {"a2dp_ctrld", STR(CONFIG_A2DP_CONTROL_DELAY_MS)},
     {"a2dp_sink_name", CONFIG_A2DP_SINK_NAME},
-	{"autoexec", "1"},
 #ifdef CONFIG_AIRPLAY_SINK
 	{"airplay_port", CONFIG_AIRPLAY_PORT},
 	{"enable_airplay", STR(CONFIG_AIRPLAY_SINK)}
