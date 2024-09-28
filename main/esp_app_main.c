@@ -124,10 +124,10 @@ const DefaultStringVal defaultStringVals[] = {
     {"a2dp_ctmt", STR(CONFIG_A2DP_CONNECT_TIMEOUT_MS)},
     {"a2dp_ctrld", STR(CONFIG_A2DP_CONTROL_DELAY_MS)},
     {"a2dp_sink_name", CONFIG_A2DP_SINK_NAME},
+#endif	
 #ifdef CONFIG_AIRPLAY_SINK
 	{"airplay_port", CONFIG_AIRPLAY_PORT},
 	{"enable_airplay", STR(CONFIG_AIRPLAY_SINK)}
-#endif
 #endif	
 };
 static bool bNetworkConnected=false;
