@@ -15,6 +15,7 @@ Depending on the hardware connected to the esp32, you can send audio to a local 
 But squeezelite-esp32 is highly extensible and you can add
 
 - [Buttons](#buttons) and [Rotary Encoder](#rotary-encoder) and map/combine them to various functions (play, pause, volume, next ...)
+- [Volume Encoder](#volume-encoder) for a dedicated volume rotary encoder
 - [GPIO expander](#gpio-expanders) (buttons, led and rotary)
 - [IR receiver](#infrared) (no pullup resistor or capacitor needed, just the 38kHz receiver)
 - [Monochrome, GrayScale or Color displays](#display) using SPI or I2C (supported drivers are SH1106, SSD1306, SSD1322, SSD1326/7, SSD1351, ST7735, ST7789 and ILI9341).
@@ -341,9 +342,9 @@ The latest LMS plugin update is required to set the visualizer mode and brightne
 | \<playerid\> dmx \<R,G,B,R,G,B, ... R,G,B\> \[\<offset\>\] | Sets the LED color starting at position "offset"<br />  with "R"(red),"G"(green),and "B"(blue) color sequences.<br />Add additional RGB values to the delimited string to set multiple LEDs.<br /> |
 
 ### Rotary Encoder
-One rotary encoder is supported, quadrature shift with press. Such encoders usually have 2 pins for encoders (A and B), and common C that must be set to ground and an optional SW pin for press. A, B and SW must be pulled up, so automatic pull-up is provided by ESP32, but you can add your own resistors. A bit of filtering on A and B (~470nF) helps for debouncing which is not made by software. 
+One general rotary encoder is supported, quadrature shift with press. Such encoders usually have 2 pins for encoders (A and B), and common C that must be set to ground and an optional SW pin for press. A, B and SW must be pulled up, so automatic pull-up is provided by ESP32, but you can add your own resistors. A bit of filtering on A and B (~470nF) helps for debouncing which is not made by software. 
 
-Encoder is normally hard-coded to respectively knob left, right and push on LMS and to volume down/up/play toggle on BT and AirPlay. Using the option 'volume' makes it hard-coded to volume down/up/play toggle all the time (even in LMS). The option 'longpress' allows an alternate mode when SW is long-pressed. In that mode, left is previous, right is next and press is toggle. Every long press on SW alternates between modes (the main mode actual behavior depends on 'volume').
+Encoder is normally hard-coded to respectively knob left, right and push on LMS and to volume down/up/play toggle on BT, AirPlay and Spotify. Using the option 'volume' makes it hard-coded to volume down/up/play toggle all the time (even in LMS). The option 'longpress' allows an alternate mode when SW is long-pressed. In that mode, left is previous, right is next and press is toggle. Every long press on SW alternates between modes (the main mode actual behavior depends on 'volume').
 
 There is also the possibility to use 'knobonly' option (exclusive with 'volume' and 'longpress'). This mode attempts to offer a single knob full navigation which is a bit contorded due to LMS UI's principles. Left, Right and Press obey to LMS's navigation rules and especially Press always goes to lower submenu item, even when navigating in the Music Library. That causes a challenge as there is no 'Play', 'Back' or 'Pause' button. Workaround are as of below:
 - longpress is 'Play'
@@ -364,7 +365,16 @@ The SW gpio is optional, you can re-affect it to a pure button if you prefer but
 
 See also the "IMPORTANT NOTE" on the "Buttons" section and remember that when 'lms_ctrls_raw' (see below) is activated, none of these knobonly,volume,longpress options apply, raw button codes (not actions) are simply sent to LMS
 
-**Note that gpio 36 and 39 are input only and cannot use interrupt, so they cannot be set to A or B. When using them for SW, a 100ms polling is used which is expensive**
+**Note that on esp32, gpio 36 and 39 are input only and cannot use interrupt, so they cannot be set to A or B. When using them for SW, a 100ms polling is used which is expensive**
+
+### Volume Rotary Encoder
+One dedicated volume rotary encoder is supported, quadrature shift with press. Encoder is hard-coded to volume-up, down and play toggle for LMS, BT, AirPlay and Spotify (see note above for filtering and HW note as well GPIO 36 and 39 on esp32)
+
+Use parameter volume_rotary with the following syntax:
+
+```
+A=<gpio>,B=<gpio>[,SW=gpio>]
+```
 
 ### Buttons
 Buttons are described using a JSON string with the following syntax
