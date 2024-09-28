@@ -369,6 +369,12 @@ menu "Squeezelite-ESP32"
 			help
 				Set GPIO for rotary encoder (quadrature phase). See README on SqueezeESP32 project's GitHub for more details
 				A=<gpio>,B=<gpio>[,SW=gpio>[[,knobonly[=<ms>]|[,volume][,longpress]]			
+		config VOLUME_ROTARY_ENCODER
+			string "Volume Rotary Encoder configuration"
+			default ""
+			help
+				Set GPIO for volume rotary encoder (quadrature phase). See README on SqueezeESP32 project's GitHub for more details
+				A=<gpio>,B=<gpio>[,SW=gpio>]
 		config GPIO_EXP_CONFIG
 			string "GPIO expander configuration"
 			help

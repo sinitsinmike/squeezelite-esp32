@@ -58,13 +58,13 @@ static struct {
 
 static TimerHandle_t polled_timer;
 
-static EXT_RAM_ATTR struct {
+static EXT_RAM_ATTR struct encoder {
 	QueueHandle_t queue;
 	void *client;
 	rotary_encoder_info_t info;
 	int A, B, SW;
 	rotary_handler handler;
-} rotary;
+} rotary, volume;
 
 static EXT_RAM_ATTR struct {
 	RingbufHandle_t rb;
@@ -227,11 +227,22 @@ static void buttons_task(void* arg) {
 			// received a rotary event
 		    xQueueReceive(rotary.queue, &event, 0);
 
-			ESP_LOGD(TAG, "Event: position %d, direction %s", event.state.position,
+			ESP_LOGD(TAG, "Rotary event: position %d, direction %s", event.state.position,
 					event.state.direction ? (event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? "CW" : "CCW") : "NOT_SET");
 			
 			rotary.handler(rotary.client, event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? 
 											ROTARY_RIGHT : ROTARY_LEFT, false);   
+		} else if (xActivatedMember == volume.queue) {
+			rotary_encoder_event_t event = { 0 };
+			
+			// received a volume rotary event
+		    xQueueReceive(volume.queue, &event, 0);
+
+			ESP_LOGD(TAG, "Volume event: position %d, direction %s", event.state.position,
+					event.state.direction ? (event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? "CW" : "CCW") : "NOT_SET");
+			
+			volume.handler(volume.client, event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? 
+											ROTARY_RIGHT : ROTARY_LEFT, false);   											
 		} else {
 			// this is IR
 			active = infrared_receive(infrared.rb, infrared.handler);
@@ -395,7 +406,55 @@ void *button_remap(void *client, int gpio, button_handler handler, int long_pres
 }
 
 /****************************************************************************************
- * Rotary encoder handler
+ * Create rotary encoder
+ */
+static bool create_rotary_encoder(struct encoder *encoder, void *id, int A, int B, int SW, int long_press, rotary_handler handler, button_handler button) {
+	// nasty ESP32 bug: fire-up constantly INT on GPIO 36/39 if ADC1, AMP, Hall used which WiFi does when PS is activated
+	if (A == -1 || B == -1 || A == 36 || A == 39 || B == 36 || B == 39) {
+		ESP_LOGI(TAG, "Cannot create rotary %d %d", A, B);
+		return false;
+	}
+
+	encoder->A = A;
+	encoder->B = B;
+	encoder->SW = SW;
+	encoder->client = id;
+	encoder->handler = handler;
+	
+    // Initialise the rotary encoder device with the GPIOs for A and B signals
+    rotary_encoder_init(&encoder->info, A, B);
+		
+    // Create a queue for events from the rotary encoder driver.
+    encoder->queue = rotary_encoder_create_queue();
+    rotary_encoder_set_queue(&encoder->info, encoder->queue);
+	
+	common_task_init();
+	xQueueAddToSet( encoder->queue, common_queue_set );
+
+	// create companion button if rotary has a switch
+	if (SW != -1) button_create(id, SW, BUTTON_LOW, true, 0, button, long_press, -1);
+	
+	return true;
+}
+
+/****************************************************************************************
+ * Volume button encoder handler
+ */
+static void volume_button_handler(void *id, button_event_e event, button_press_e mode, bool long_press) {
+	ESP_LOGI(TAG, "Volume encoder push-button %d", event);
+	volume.handler(id, event == BUTTON_PRESSED ? ROTARY_PRESSED : ROTARY_RELEASED, long_press);
+}	
+
+/****************************************************************************************
+ * Create volume encoder
+ */
+bool create_volume_rotary(void *id, int A, int B, int SW, rotary_handler handler) {
+	ESP_LOGI(TAG, "Created volume encoder A:%d B:%d, SW:%d", A, B, SW);
+	return create_rotary_encoder(&volume, id, A, B, SW, false, handler, volume_button_handler);
+}	
+
+/****************************************************************************************
+ * Rotary button encoder handler
  */
 static void rotary_button_handler(void *id, button_event_e event, button_press_e mode, bool long_press) {
 	ESP_LOGI(TAG, "Rotary push-button %d", event);
@@ -406,34 +465,8 @@ static void rotary_button_handler(void *id, button_event_e event, button_press_e
  * Create rotary encoder
  */
 bool create_rotary(void *id, int A, int B, int SW, int long_press, rotary_handler handler) {
-	// nasty ESP32 bug: fire-up constantly INT on GPIO 36/39 if ADC1, AMP, Hall used which WiFi does when PS is activated
-	if (A == -1 || B == -1 || A == 36 || A == 39 || B == 36 || B == 39) {
-		ESP_LOGI(TAG, "Cannot create rotary %d %d", A, B);
-		return false;
-	}
-
-	rotary.A = A;
-	rotary.B = B;
-	rotary.SW = SW;
-	rotary.client = id;
-	rotary.handler = handler;
-	
-    // Initialise the rotary encoder device with the GPIOs for A and B signals
-    rotary_encoder_init(&rotary.info, A, B);
-		
-    // Create a queue for events from the rotary encoder driver.
-    rotary.queue = rotary_encoder_create_queue();
-    rotary_encoder_set_queue(&rotary.info, rotary.queue);
-	
-	common_task_init();
-	xQueueAddToSet( rotary.queue, common_queue_set );
-
-	// create companion button if rotary has a switch
-	if (SW != -1) button_create(id, SW, BUTTON_LOW, true, 0, rotary_button_handler, long_press, -1);
-	
 	ESP_LOGI(TAG, "Created rotary encoder A:%d B:%d, SW:%d", A, B, SW);
-	
-	return true;
+	return create_rotary_encoder(&rotary, id, A, B, SW, long_press, handler, rotary_button_handler);
 }	
 
 /****************************************************************************************

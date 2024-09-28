@@ -89,6 +89,7 @@ const DefaultStringVal defaultStringVals[] = {
     {"actrls_config", ""},
     {"lms_ctrls_raw", "n"},
     {"rotary_config", CONFIG_ROTARY_ENCODER},
+	{"volume_rotary", CONFIG_VOLUME_ROTARY_ENCODER},
     {"display_config", CONFIG_DISPLAY_CONFIG},
     {"eth_config", CONFIG_ETH_CONFIG},
     {"i2c_config", CONFIG_I2C_CONFIG},

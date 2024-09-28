@@ -38,6 +38,7 @@ static esp_err_t actrls_process_action (const cJSON * member, actrls_config_t *c
 
 static esp_err_t actrls_init_json(const char *profile_name, bool create);
 static void control_rotary_handler(void *client, rotary_event_e event, bool long_press);
+static void volume_rotary_handler(void *client, rotary_event_e event, bool long_press);
 static void rotary_timer( TimerHandle_t xTimer );
 
 static const actrls_config_map_t actrls_config_map[] =
@@ -156,6 +157,24 @@ esp_err_t actrls_init(const char *profile_name) {
 		// create rotary (no handling of long press)
 		err = create_rotary(NULL, A, B, SW, longpress, control_rotary_handler) ? ESP_OK : ESP_FAIL;
 	}
+	
+	free(config);
+	config = config_alloc_get_default(NVS_TYPE_STR, "volume_rotary", NULL, 0);
+	
+	// now see if we have a dedicated volume rotary
+	if (config && *config) {
+		int A = -1, B = -1, SW = -1;
+		
+		// parse config
+		PARSE_PARAM(config, "A", '=', A);
+		PARSE_PARAM(config, "B", '=', B);
+		PARSE_PARAM(config, "SW", '=', SW);
+						
+		// create rotary (no handling of long press)
+		err |= create_volume_rotary(NULL, A, B, SW, volume_rotary_handler) ? ESP_OK : ESP_FAIL;
+	}
+	
+	free(config);
 	
 	// set infrared GPIO if any
 	parse_set_GPIO(set_ir_gpio);
@@ -283,6 +302,29 @@ static void control_rotary_handler(void *client, rotary_event_e event, bool long
 		else if (rotary.volume_lock) action = ACTRLS_TOGGLE;
 		else action = KNOB_PUSH;
 		break;
+	default:
+		break;
+	}
+	
+	if (action != ACTRLS_NONE) (*current_controls[action])(pressed);
+}
+
+/****************************************************************************************
+ * 
+ */
+static void volume_rotary_handler(void *client, rotary_event_e event, bool long_press) {
+	actrls_action_e action = ACTRLS_NONE;
+	bool pressed = true;
+	
+	switch(event) {
+	case ROTARY_LEFT:
+		action = ACTRLS_VOLDOWN;
+		break;
+	case ROTARY_RIGHT:
+		action = ACTRLS_VOLUP;
+		break;
+	case ROTARY_PRESSED:
+		action = ACTRLS_TOGGLE;
 	default:
 		break;
 	}
@@ -566,6 +608,13 @@ static esp_err_t actrls_init_json(const char *profile_name, bool create) {
 exit:	
 	free(config);
 	return err;
+}
+
+/****************************************************************************************
+ *
+ */
+actrls_handler get_ctrl_handler(actrls_action_e action) {
+	return current_controls[action];	
 }
 
 /****************************************************************************************

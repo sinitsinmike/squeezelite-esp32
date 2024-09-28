@@ -53,3 +53,9 @@ void actrls_set_default(const actrls_t controls, bool raw_controls, actrls_hook_
 void actrls_set(const actrls_t controls, bool raw_controls, actrls_hook_t *hook, actrls_ir_handler_t *ir_handler);
 void actrls_unset(void);
 bool actrls_ir_action(uint16_t addr, uint16_t code);
+
+/* Call this to get the handler for any of the audio actions. It will map to the control specific
+to the current mode (LMS, AirPlay, Spotify). This is useful if you have a custom way to create 
+buttons (like analogue buttons)
+*/
+actrls_handler get_ctrl_handler(actrls_action_e);
