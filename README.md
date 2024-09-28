@@ -15,7 +15,7 @@ Depending on the hardware connected to the esp32, you can send audio to a local 
 But squeezelite-esp32 is highly extensible and you can add
 
 - [Buttons](#buttons) and [Rotary Encoder](#rotary-encoder) and map/combine them to various functions (play, pause, volume, next ...)
-- [Volume Encoder](#volume-encoder) for a dedicated volume rotary encoder
+- [Volume Encoder](#volume-rotary-encoder) for a dedicated volume rotary encoder
 - [GPIO expander](#gpio-expanders) (buttons, led and rotary)
 - [IR receiver](#infrared) (no pullup resistor or capacitor needed, just the 38kHz receiver)
 - [Monochrome, GrayScale or Color displays](#display) using SPI or I2C (supported drivers are SH1106, SSD1306, SSD1322, SSD1326/7, SSD1351, ST7735, ST7789 and ILI9341).
